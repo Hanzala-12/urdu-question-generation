@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import unicodedata
 from collections import Counter
 from pathlib import Path
@@ -239,9 +240,15 @@ def main() -> None:
     ap.add_argument("--no-plot", action="store_true")
     args = ap.parse_args()
 
+    # Keep the cell output clean: no download progress bars, warnings only.
+    os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
+    import datasets
     from datasets import load_dataset
 
-    print("Loading datasets from HuggingFace ...")
+    datasets.utils.logging.set_verbosity_error()
+    datasets.disable_progress_bars()
+
+    print("loading UQA and Wiki-UQA from HuggingFace ...")
     uqa = load_dataset(UQA_ID)
     wiki = load_dataset(WIKI_UQA_ID)
 
