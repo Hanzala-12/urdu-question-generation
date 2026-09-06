@@ -83,7 +83,6 @@ See [`results/tables.md`](results/tables.md) and [`results/metrics.json`](result
 [Wiki-UQA](https://huggingface.co/datasets/uqa/Wiki-UQA) as an out-of-domain test.
 Licensed CC-BY-4.0.
 
-## Team
+## Author
 
-- _Member 1 — TBD_
-- _Member 2 — TBD_
+Muhammad Hanzala ([@Hanzala-12](https://github.com/Hanzala-12))
