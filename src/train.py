@@ -141,10 +141,12 @@ def train(
         print(f"resumed from epoch {start_epoch - 1}")
 
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-    new_log = not LOSS_LOG.exists()
-    log_f = LOSS_LOG.open("a", newline="", encoding="utf-8")
+    # Fresh log for a normal run; append only when resuming, so the debug
+    # gate's single epoch does not pollute the real training curve.
+    log_mode = "a" if (resume and LOSS_LOG.exists()) else "w"
+    log_f = LOSS_LOG.open(log_mode, newline="", encoding="utf-8")
     writer = csv.writer(log_f)
-    if new_log:
+    if log_mode == "w":
         writer.writerow(["epoch", "train_loss", "val_loss", "val_ppl", "lr", "seconds"])
 
     best_val = math.inf
