@@ -1,0 +1,11 @@
+# Local environment for evaluation and the front end.
+# Training runs on Kaggle, where the notebook installs its own deps.
+torch>=2.1
+sentencepiece>=0.2.0
+datasets>=2.16
+sacrebleu>=2.4
+rouge-score>=0.1.2
+gradio>=4.0
+matplotlib>=3.7
+pandas>=2.0
+numpy>=1.24

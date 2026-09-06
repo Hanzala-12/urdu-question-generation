@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# Derived data (regenerate with: python -m src.data_prep)
+data/
+
+# Large artifacts (produced on Kaggle, downloaded locally).
+# The tokenizer is small and IS committed; the checkpoint is added
+# explicitly with `git add -f` once we know its size.
+artifacts/*
+!artifacts/.gitkeep
+!artifacts/ur_sp.model
+!artifacts/ur_sp.vocab
+
+# Kaggle output bundles
+*.zip
+kaggle_outputs/
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
