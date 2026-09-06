@@ -271,18 +271,18 @@ def main() -> None:
     (RESULTS_DIR / "data_stats.json").write_text(
         json.dumps(slim, indent=2, ensure_ascii=False), encoding="utf-8"
     )
-    print(f"\nwrote {RESULTS_DIR / 'data_stats.json'}")
 
     if not args.no_plot:
         plot_length_hists(stats_by_split, FIGURES_DIR / "length_hist.png")
 
-    print("\nDone. Preview:")
+    # Compact preview: one pair per split, source truncated.
+    print("\nSample pairs (source -> target):")
     for path in (TRAIN_TSV, VALID_TSV, WIKI_TSV):
-        if path.exists():
-            first = path.read_text(encoding="utf-8").splitlines()[:2]
-            print(f"\n# {path.name}")
-            for line in first:
-                print(line)
+        if not path.exists():
+            continue
+        src, tgt = path.read_text(encoding="utf-8").splitlines()[0].split("\t")
+        src = src if len(src) <= 100 else src[:100] + " ..."
+        print(f"  [{path.stem:5}] {src}\n          -> {tgt}")
 
 
 if __name__ == "__main__":

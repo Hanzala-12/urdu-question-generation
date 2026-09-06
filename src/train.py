@@ -100,7 +100,6 @@ def train(
 ) -> dict:
     set_seed(CFG.train.seed)
     device = pick_device(device_str)
-    print(f"device: {device}")
 
     sp = load_sp()
     train_ds: object = QGDataset(TRAIN_TSV, sp)
@@ -108,7 +107,8 @@ def train(
     if limit:
         train_ds = Subset(train_ds, range(min(limit, len(train_ds))))
         valid_ds = Subset(valid_ds, range(min(limit // 5 or 1, len(valid_ds))))
-    print(f"train pairs: {len(train_ds):,}   valid pairs: {len(valid_ds):,}")
+    print(f"device: {device} | epochs: {epochs} | batch: {batch_size} | "
+          f"train pairs: {len(train_ds):,} | valid pairs: {len(valid_ds):,}")
 
     train_loader = DataLoader(
         train_ds, batch_size=batch_size, shuffle=True,

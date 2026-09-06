@@ -23,6 +23,9 @@ Choices, for the viva
 from __future__ import annotations
 
 import argparse
+import contextlib
+import os
+import tempfile
 
 import sentencepiece as spm
 
@@ -53,69 +56,101 @@ def build_corpus() -> int:
     return len(pairs)
 
 
+@contextlib.contextmanager
+def _muffle_native_stderr():
+    """Send C-level stderr (SentencePiece's LOG(INFO) wall) to a temp file.
+
+    Python-level redirection can't catch it - the trainer writes straight to
+    file descriptor 2. On failure the captured text is printed so the real
+    error is not lost.
+    """
+    buf = tempfile.NamedTemporaryFile("w+", delete=False, suffix=".spmlog")
+    saved = os.dup(2)
+    os.dup2(buf.fileno(), 2)
+    try:
+        yield
+        os.dup2(saved, 2)
+    except BaseException:
+        os.dup2(saved, 2)
+        buf.seek(0)
+        print(buf.read())
+        raise
+    finally:
+        os.close(saved)
+        buf.close()
+        with contextlib.suppress(OSError):
+            os.unlink(buf.name)
+
+
 def train(vocab_size: int = 8000) -> None:
     SPM_PREFIX.parent.mkdir(parents=True, exist_ok=True)
-    spm.SentencePieceTrainer.train(
-        input=str(SPM_CORPUS),
-        model_prefix=str(SPM_PREFIX),
-        vocab_size=vocab_size,
-        model_type="unigram",
-        character_coverage=1.0,
-        user_defined_symbols=[ANS_OPEN, ANS_CLOSE],
-        pad_id=PAD_ID,
-        unk_id=UNK_ID,
-        bos_id=BOS_ID,
-        eos_id=EOS_ID,
-        pad_piece="<pad>",
-        unk_piece="<unk>",
-        bos_piece="<s>",
-        eos_piece="</s>",
-        # Let a small corpus (local smoke test) settle for a smaller vocab
-        # instead of hard-failing; the full-data run always reaches 8000.
-        hard_vocab_limit=False,
-    )
-    print(f"wrote {SPM_MODEL}")
+    with _muffle_native_stderr():
+        spm.SentencePieceTrainer.train(
+            input=str(SPM_CORPUS),
+            model_prefix=str(SPM_PREFIX),
+            vocab_size=vocab_size,
+            model_type="unigram",
+            character_coverage=1.0,
+            user_defined_symbols=[ANS_OPEN, ANS_CLOSE],
+            pad_id=PAD_ID,
+            unk_id=UNK_ID,
+            bos_id=BOS_ID,
+            eos_id=EOS_ID,
+            pad_piece="<pad>",
+            unk_piece="<unk>",
+            bos_piece="<s>",
+            eos_piece="</s>",
+            # Let a small corpus (local smoke test) settle for a smaller vocab
+            # instead of hard-failing; the full-data run always reaches 8000.
+            hard_vocab_limit=False,
+        )
+    print(f"trained SentencePiece unigram model  ->  {SPM_MODEL.name} (vocab {vocab_size})")
 
 
 def report() -> None:
+    """Print a short summary; write the full worked examples to a file."""
     sp = spm.SentencePieceProcessor()
     sp.load(str(SPM_MODEL))
-    print(f"vocab size: {sp.get_piece_size()}")
-    # Check the tags in the spaced context data_prep actually produces
-    # (an isolated "<ans>" fragments because of SentencePiece's dummy
-    # prefix; that never happens mid-sentence).
+
+    # Tag check in the spaced context data_prep produces (an isolated
+    # "<ans>" fragments due to SentencePiece's dummy prefix; never mid-line).
     probe = f"کتاب {ANS_OPEN} علی {ANS_CLOSE} ہے"
-    pieces = sp.encode(probe, out_type=str)
+    tag_pieces = sp.encode(probe, out_type=str)
     for tag in (ANS_OPEN, ANS_CLOSE):
-        assert pieces.count(tag) == 1, f"{tag} not a single piece in {pieces}"
-        print(f"  {tag!r} -> id {sp.piece_to_id(tag)} (single token in context, good)")
+        assert tag_pieces.count(tag) == 1, f"{tag} not a single piece in {tag_pieces}"
 
     pairs = load_pairs(TRAIN_TSV)[:5]
-    lines = ["Five tokenised training examples\n" + "=" * 34 + "\n"]
-    for src, tgt in pairs:
-        s_pieces = sp.encode(src, out_type=str)
-        t_pieces = sp.encode(tgt, out_type=str)
-        rt = sp.decode(sp.encode(tgt, out_type=int)) == " ".join(tgt.split())
-        block = (
-            f"SRC  {src}\n"
-            f"     {' '.join(s_pieces)}   ({len(s_pieces)} pieces)\n"
-            f"TGT  {tgt}\n"
-            f"     {' '.join(t_pieces)}   ({len(t_pieces)} pieces)\n"
-            f"     round-trip ok: {rt}\n"
+    print(f"vocab size          : {sp.get_piece_size()}")
+    print(f"<ans> / </ans> ids  : {sp.piece_to_id(ANS_OPEN)} / {sp.piece_to_id(ANS_CLOSE)}"
+          f"  (single tokens in context)")
+    print(f"{'':2}5 training examples  src pieces  tgt pieces  round-trip")
+    detail = ["Five tokenised training examples\n" + "=" * 34 + "\n"]
+    for i, (src, tgt) in enumerate(pairs, 1):
+        s_ids = sp.encode(src, out_type=int)
+        t_ids = sp.encode(tgt, out_type=int)
+        rt = sp.decode(t_ids) == " ".join(tgt.split())
+        print(f"{'':2}  example {i:<11}{len(s_ids):>10}{len(t_ids):>12}{str(rt):>12}")
+        detail.append(
+            f"SRC  {src}\n     {' '.join(sp.encode(src, out_type=str))}   "
+            f"({len(s_ids)} pieces)\n"
+            f"TGT  {tgt}\n     {' '.join(sp.encode(tgt, out_type=str))}   "
+            f"({len(t_ids)} pieces)\n     round-trip ok: {rt}\n\n"
         )
-        print("\n" + block)
-        lines.append(block)
 
-    lines.append(
+    # One example shown in full so the cell still demonstrates the split.
+    s0 = pairs[0][0]
+    print(f"\nexample 1 source pieces:\n  {' '.join(sp.encode(s0, out_type=str))}")
+
+    detail.append(
         "\nNote on Urdu morphology: the unigram model keeps common function\n"
         "words whole (کے، میں، سے) and breaks inflected or compound forms into\n"
-        "a stem plus affix pieces (e.g. plural/oblique endings and the\n"
-        "izafat 'ی'). Rare proper nouns fragment into character-level pieces,\n"
-        "which is where most <unk>-like behaviour and copy errors come from.\n"
+        "a stem plus affix pieces (e.g. plural/oblique endings and the izafat\n"
+        "'ی'). Rare proper nouns fragment into character-level pieces, which\n"
+        "is where most <unk>-like behaviour and copy errors come from.\n"
     )
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-    (RESULTS_DIR / "tokenizer_examples.txt").write_text("".join(lines), encoding="utf-8")
-    print(f"wrote {RESULTS_DIR / 'tokenizer_examples.txt'}")
+    (RESULTS_DIR / "tokenizer_examples.txt").write_text("".join(detail), encoding="utf-8")
+    print(f"full worked examples -> {RESULTS_DIR.name}/tokenizer_examples.txt")
 
 
 def main() -> None:
