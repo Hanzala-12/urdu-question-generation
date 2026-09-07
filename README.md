@@ -21,13 +21,25 @@ seq2seq. Own SentencePiece subword vocabulary (8k).
 | Training | teacher forcing, padding-masked cross-entropy, Adam, grad-clip 1.0, `ReduceLROnPlateau` |
 | Decoding | greedy **and** beam search (k=5) |
 
+## Two ways to read this project
+
+| You want… | Look at |
+|---|---|
+| **One self-contained notebook** — every step inline, run top to bottom on Kaggle | [`notebooks/urdu_qg_standalone.ipynb`](notebooks/urdu_qg_standalone.ipynb) |
+| **Modular `.py` code** — the same pipeline as a package, with a thin driver notebook | [`src/`](src/) + [`notebooks/train_urdu_qg.ipynb`](notebooks/train_urdu_qg.ipynb) |
+
+Both produce the same artifacts and identical results — they are the same logic, one
+flattened into a notebook and one split into modules.
+
 ## Repository layout
 
 ```
+notebooks/
+  urdu_qg_standalone.ipynb  — self-contained: data → tokenizer → model → train → eval → tables
+  train_urdu_qg.ipynb       — thin wrapper: clones the repo and runs the src/ modules
 src/            data_prep, spm_train, dataset, model, train, decode, evaluate
-notebooks/      train_urdu_qg.ipynb  — the Kaggle GPU run
 app/            app.py               — Gradio front end
-results/        metrics.json, samples.tsv, tables.md, figures/
+results/        metrics.json, samples.tsv, human_eval.csv, tables.md, figures/
 blog/           medium_blog.md, linkedin_post.md
 docs/EXPLAIN.md per-module notes
 ```
@@ -51,9 +63,9 @@ pip install -r requirements.txt
 | 5. Evaluate (Task 4) | `python -m src.evaluate --split both` | local or Kaggle |
 | 6. Front end (Task 5) | `python app/app.py` | local |
 
-On Kaggle, `notebooks/train_urdu_qg.ipynb` runs steps 1–5 and zips `artifacts/` +
-`results/` to `/kaggle/working/outputs.zip`. Download it and extract into the repo
-root, then run the front end locally.
+On Kaggle, either notebook runs steps 1–5 and zips `artifacts/` + `results/` (+ the
+TSVs) to `/kaggle/working/outputs.zip`. Download it, unpack into the repo root, then
+run the front end locally.
 
 `artifacts/best.pt` (trained weights) is produced by step 4. If it is not in the
 repo, download it from the latest release and place it in `artifacts/`.
