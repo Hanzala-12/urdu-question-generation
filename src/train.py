@@ -151,6 +151,7 @@ def train(
 
     best_val = math.inf
     history: list[dict] = []
+    wall0 = time.time()
     for epoch in range(start_epoch, start_epoch + epochs):
         t0 = time.time()
         tr = run_epoch(
@@ -181,7 +182,24 @@ def train(
 
     log_f.close()
     _plot_curve()
-    print(f"\nbest val loss: {best_val:.4f}  (ppl {math.exp(min(best_val, 20)):.2f})")
+
+    # Table 2 needs wall-clock and GPU; record them next to the loss log.
+    import json
+
+    gpu = torch.cuda.get_device_name(0) if torch.cuda.is_available() else "CPU"
+    (RESULTS_DIR / "train_meta.json").write_text(
+        json.dumps({
+            "wall_clock_s": round(time.time() - wall0, 1),
+            "gpu": gpu,
+            "epochs": epochs,
+            "batch_size": batch_size,
+            "n_params": n_params,
+            "best_val_loss": round(best_val, 4),
+        }, indent=2),
+        encoding="utf-8",
+    )
+    print(f"\nbest val loss: {best_val:.4f}  (ppl {math.exp(min(best_val, 20)):.2f})  "
+          f"| {(time.time() - wall0) / 60:.1f} min on {gpu}")
     return {"best_val_loss": best_val, "history": history, "n_params": n_params}
 
 

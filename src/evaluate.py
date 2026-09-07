@@ -80,11 +80,14 @@ def _decode_split(model, sp, pairs, device, beam_max: int):
             batch["src_key_padding_mask"].to(device),
         )
         for ids, ref_text, src_text in zip(seqs, batch["tgt_texts"], batch["src_texts"]):
-            greedy_hyps.append(sp.decode(ids))
+            hyp_text = sp.decode(ids)
+            greedy_hyps.append(hyp_text)
             refs.append(ref_text)
             order_src.append(src_text)
-            n_unk += sum(1 for i in ids if i == UNK_ID)
-            n_tok += len(ids)
+            # <unk> rate the way the manual's starter measures it: SentencePiece
+            # renders <unk> as U+2047, over whitespace tokens of the output.
+            n_unk += hyp_text.count("⁇")
+            n_tok += len(hyp_text.split())
 
     beam_hyps: list[str] = []
     n_beam = len(pairs) if beam_max <= 0 else min(beam_max, len(pairs))
@@ -149,6 +152,24 @@ def _write_samples(out_valid: dict, path: Path, n: int) -> None:
     print(f"wrote {path}  ({n} rows)")
 
 
+def _write_human_eval(out_valid: dict, path: Path, n: int, seed: int) -> None:
+    """Fixed-seed sample for the two-member human evaluation (Section 3.2)."""
+    import csv
+    import random
+
+    pool = len(out_valid["greedy"])
+    idx = sorted(random.Random(seed).sample(range(pool), min(n, pool)))
+    with path.open("w", encoding="utf-8", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["i", "source", "reference", "greedy",
+                    "m1_fluency", "m1_relevance", "m1_answerability",
+                    "m2_fluency", "m2_relevance", "m2_answerability"])
+        for j in idx:
+            w.writerow([j, out_valid["src"][j], out_valid["refs"][j],
+                        out_valid["greedy"][j], "", "", "", "", "", ""])
+    print(f"wrote {path}  ({len(idx)} rows) - fill m1_/m2_ columns with 1/0")
+
+
 def _attention_figure(model, sp, source_text: str, path: Path) -> None:
     import matplotlib
 
@@ -204,7 +225,13 @@ def _write_tables(all_metrics: dict, path: Path) -> None:
     npar = all_metrics.get("_n_params", "")
     lines.append(f"| Trainable parameters | {npar} |")
     lines.append(f"| Optimiser | Adam lr={CFG.train.lr}, ReduceLROnPlateau |")
-    lines.append(f"| Batch / epochs | {CFG.train.batch_size} / {CFG.train.epochs} |\n")
+    meta_path = RESULTS_DIR / "train_meta.json"
+    meta = json.loads(meta_path.read_text(encoding="utf-8")) if meta_path.exists() else {}
+    wall = f"{meta['wall_clock_s'] / 60:.1f} min" if "wall_clock_s" in meta else "-"
+    gpu = meta.get("gpu", "-")
+    ep = meta.get("epochs", CFG.train.epochs)
+    bs = meta.get("batch_size", CFG.train.batch_size)
+    lines.append(f"| Batch / epochs / wall-clock / GPU | {bs} / {ep} / {wall} / {gpu} |\n")
 
     lines.append("## Table 3 - Automatic metrics\n")
     lines.append("| Split | Decoding | BLEU-4 | ROUGE-L | PPL | <unk>% |")
@@ -265,6 +292,8 @@ def main() -> None:
 
     if out_valid is not None:
         _write_samples(out_valid, RESULTS_DIR / "samples.tsv", CFG.decode.n_eval_samples)
+        _write_human_eval(out_valid, RESULTS_DIR / "human_eval.csv",
+                          CFG.decode.human_eval_n, CFG.decode.human_eval_seed)
         # A readable example for the attention heat-map.
         _attention_figure(model, sp, out_valid["src"][0], FIGURES_DIR / "attention.png")
     _write_tables(all_metrics, RESULTS_DIR / "tables.md")
