@@ -74,14 +74,24 @@ and place it at `artifacts/best.pt` before running evaluation or the front end.
 
 ## Results
 
-See [`results/tables.md`](results/tables.md) and [`results/metrics.json`](results/metrics.json).
+Trained 15 epochs on a Tesla T4 (~84 min); best checkpoint at epoch 10
+(validation loss 3.53, perplexity 34). Full detail in
+[`results/tables.md`](results/tables.md) and [`results/metrics.json`](results/metrics.json).
 
 | Split | Decoding | BLEU-4 | ROUGE-L | PPL | `<unk>`% |
 |---|---|---|---|---|---|
-| UQA valid | greedy | _TBD_ | _TBD_ | _TBD_ | _TBD_ |
-| UQA valid | beam k=5 | _TBD_ | _TBD_ | _TBD_ | _TBD_ |
-| Wiki-UQA | greedy | _TBD_ | _TBD_ | _TBD_ | _TBD_ |
-| Wiki-UQA | beam k=5 | _TBD_ | _TBD_ | _TBD_ | _TBD_ |
+| UQA valid | greedy | 5.15 | 0.256 | 34.2 | 0.0 |
+| UQA valid | beam k=5 | 1.02 | 0.126 | 34.2 | 0.0 |
+| Wiki-UQA | greedy | 3.57 | 0.227 | 50.8 | 0.0 |
+| Wiki-UQA | beam k=5 | 0.32 | 0.076 | 50.8 | 0.0 |
+
+Greedy sits just below the manual's expected 6–13 band — reasonable for a
+35 M-parameter model trained from scratch, and well clear of "≈0 = bug" /
+"&gt;30 = leakage". **Beam search hurts here:** it collapses to a handful of
+fluent but generic questions and recycles them, so n-gram overlap with the
+varied references drops. This is the documented beam-degradation effect on
+weak models (Koehn & Knowles, 2017) — greedy stays anchored to the source
+via attention. See the blog's discussion section.
 
 ![Front end](results/figures/frontend.png)
 
