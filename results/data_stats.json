@@ -1,0 +1,23 @@
+{
+  "train": {
+    "raw_rows": 124745,
+    "answerable_rows": 83018,
+    "pairs": 75236,
+    "mean_src": 32.59,
+    "mean_tgt": 11.92
+  },
+  "valid": {
+    "raw_rows": 16824,
+    "answerable_rows": 11169,
+    "pairs": 10043,
+    "mean_src": 33.23,
+    "mean_tgt": 12.29
+  },
+  "wiki": {
+    "raw_rows": 210,
+    "answerable_rows": 209,
+    "pairs": 177,
+    "mean_src": 31.69,
+    "mean_tgt": 11.42
+  }
+}

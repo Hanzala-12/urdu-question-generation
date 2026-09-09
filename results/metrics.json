@@ -1,0 +1,32 @@
+{
+  "UQA valid": {
+    "greedy": {
+      "BLEU-4": 5.15,
+      "ROUGE-L": 0.2555,
+      "unk_%": 0.0,
+      "PPL": 34.174
+    },
+    "beam(k=5)": {
+      "BLEU-4": 1.02,
+      "ROUGE-L": 0.1262,
+      "unk_%": 0.0,
+      "PPL": 34.174,
+      "n_scored": 3000
+    }
+  },
+  "Wiki-UQA": {
+    "greedy": {
+      "BLEU-4": 3.57,
+      "ROUGE-L": 0.2273,
+      "unk_%": 0.0,
+      "PPL": 50.774
+    },
+    "beam(k=5)": {
+      "BLEU-4": 0.32,
+      "ROUGE-L": 0.0763,
+      "unk_%": 0.0,
+      "PPL": 50.774,
+      "n_scored": 177
+    }
+  }
+}

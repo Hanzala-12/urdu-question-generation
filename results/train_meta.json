@@ -1,0 +1,7 @@
+{
+  "wall_clock_s": 5070.3,
+  "gpu": "Tesla T4",
+  "epochs": 15,
+  "batch_size": 64,
+  "best_val_loss": 3.5315
+}
