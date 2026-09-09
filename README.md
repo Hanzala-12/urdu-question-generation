@@ -67,8 +67,10 @@ On Kaggle, either notebook runs steps 1–5 and zips `artifacts/` + `results/` (
 TSVs) to `/kaggle/working/outputs.zip`. Download it, unpack into the repo root, then
 run the front end locally.
 
-`artifacts/best.pt` (trained weights) is produced by step 4. If it is not in the
-repo, download it from the latest release and place it in `artifacts/`.
+`artifacts/best.pt` (trained weights, ~140 MB) is produced by step 4 and is too large
+for the repo — download it from the
+[v1.0 release](https://github.com/Hanzala-12/urdu-question-generation/releases/tag/v1.0)
+and place it at `artifacts/best.pt` before running evaluation or the front end.
 
 ## Results
 
