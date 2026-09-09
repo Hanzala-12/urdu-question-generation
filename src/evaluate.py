@@ -50,10 +50,20 @@ def _bleu(hyps: list[str], refs: list[str]) -> float:
     return sacrebleu.corpus_bleu(hyps, [refs]).score
 
 
+class _WhitespaceTokenizer:
+    """rouge_score's default tokenizer keeps only [a-z0-9] after lowercasing,
+    which deletes every Urdu character. Split on whitespace instead."""
+
+    def tokenize(self, text: str) -> list[str]:
+        return text.split()
+
+
 def _rouge_l(hyps: list[str], refs: list[str]) -> float:
     from rouge_score import rouge_scorer
 
-    scorer = rouge_scorer.RougeScorer(["rougeL"], use_stemmer=False)
+    scorer = rouge_scorer.RougeScorer(
+        ["rougeL"], use_stemmer=False, tokenizer=_WhitespaceTokenizer()
+    )
     total = sum(
         scorer.score(r, h)["rougeL"].fmeasure for h, r in zip(hyps, refs)
     )
@@ -107,10 +117,13 @@ def _decode_split(model, sp, pairs, device, beam_max: int):
     }
 
 
-def evaluate_split(model, sp, tsv_path: Path, device, beam_max: int) -> dict:
+def evaluate_split(model, sp, tsv_path: Path, device, beam_max: int,
+                   max_eval: int | None = None) -> dict:
     pairs = load_pairs(tsv_path)
-    print(f"{tsv_path.name}: {len(pairs)} pairs")
-    out = _decode_split(model, sp, pairs, device, beam_max)
+    decode_pairs = pairs[:max_eval] if max_eval else pairs
+    print(f"{tsv_path.name}: {len(pairs)} pairs "
+          f"(decoding {len(decode_pairs)}, beam {min(beam_max or len(decode_pairs), len(decode_pairs))})")
+    out = _decode_split(model, sp, decode_pairs, device, beam_max)
 
     # Perplexity: teacher-forced CE over the whole split.
     ds = QGDataset(tsv_path, sp)
@@ -123,6 +136,7 @@ def evaluate_split(model, sp, tsv_path: Path, device, beam_max: int) -> dict:
     g, b, refs = out["greedy"], out["beam"], out["refs"]
     metrics = {
         "n_pairs": len(pairs),
+        "n_greedy_scored": len(refs),
         "perplexity": round(ppl, 3),
         "unk_pct": round(100 * out["unk_rate"], 3),
         "greedy": {
@@ -259,6 +273,8 @@ def main() -> None:
     ap.add_argument("--split", choices=["valid", "wiki", "both"], default="both")
     ap.add_argument("--beam-max", type=int, default=3000,
                     help="cap on examples scored with beam search (0 = all)")
+    ap.add_argument("--max-eval", type=int, default=None,
+                    help="cap on examples decoded for BLEU/ROUGE (perplexity is always full)")
     ap.add_argument("--ckpt", default=str(BEST_CKPT))
     ap.add_argument("--device", default=None)
     args = ap.parse_args()
@@ -277,7 +293,8 @@ def main() -> None:
     all_metrics: dict = {}
     out_valid = None
     for name, path in targets.items():
-        metrics, out = evaluate_split(model, sp, path, device, args.beam_max)
+        metrics, out = evaluate_split(model, sp, path, device, args.beam_max,
+                                      max_eval=args.max_eval)
         all_metrics[name] = metrics
         print(json.dumps({name: metrics}, indent=2, ensure_ascii=False))
         if name == "valid":

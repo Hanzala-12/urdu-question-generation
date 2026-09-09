@@ -90,7 +90,7 @@ class DecodeConfig:
     """Inference settings shared by evaluation and the front end."""
 
     beam_size: int = 5
-    length_penalty: float = 1.0     # >1 favours longer hypotheses
+    length_penalty: float = 0.6     # alpha in score / (len ** alpha); GNMT-style
     max_decode_len: int = 40
     n_eval_samples: int = 60        # rows written to results/samples.tsv (>= 50)
     human_eval_n: int = 50

@@ -38,7 +38,7 @@ class Encoder(nn.Module):
         assert m.rnn_cell == "lstm", "only the LSTM path is implemented"
         self.hidden_size = m.hidden_size
         self.dec_layers = m.dec_layers
-        self.embedding = nn.Embedding(m.vocab_size, m.emb_dim, padding_idx=PAD_ID)
+        self.emb = nn.Embedding(m.vocab_size, m.emb_dim, padding_idx=PAD_ID)
         self.dropout = nn.Dropout(m.dropout)
         self.rnn = nn.LSTM(
             m.emb_dim,
@@ -55,7 +55,7 @@ class Encoder(nn.Module):
     def forward(
         self, src: torch.Tensor, src_lengths: torch.Tensor
     ) -> tuple[torch.Tensor, tuple[torch.Tensor, torch.Tensor]]:
-        emb = self.dropout(self.embedding(src))                     # [B, S, E]
+        emb = self.dropout(self.emb(src))                     # [B, S, E]
         packed = pack_padded_sequence(
             emb, src_lengths.cpu(), batch_first=True, enforce_sorted=True
         )
@@ -85,7 +85,7 @@ class BahdanauAttention(nn.Module):
         self.W_dec = nn.Linear(dec_dim, dec_dim, bias=False)
         self.v = nn.Linear(dec_dim, 1, bias=False)
 
-    def project_keys(self, enc_outputs: torch.Tensor) -> torch.Tensor:
+    def keys(self, enc_outputs: torch.Tensor) -> torch.Tensor:
         """W_enc . h_enc for every source position - computed once per batch."""
         return self.W_enc(enc_outputs)                             # [B, S, H]
 
@@ -93,7 +93,7 @@ class BahdanauAttention(nn.Module):
         self,
         dec_state: torch.Tensor,        # [B, H]
         enc_outputs: torch.Tensor,      # [B, S, 2H]
-        enc_keys: torch.Tensor,         # [B, S, H]  (from project_keys)
+        enc_keys: torch.Tensor,         # [B, S, H]  (from keys())
         pad_mask: torch.Tensor,         # [B, S]  True where PAD
     ) -> tuple[torch.Tensor, torch.Tensor]:
         query = self.W_dec(dec_state).unsqueeze(1)                 # [B, 1, H]
@@ -111,7 +111,7 @@ class Decoder(nn.Module):
     def __init__(self, m: ModelConfig) -> None:
         super().__init__()
         enc_dim = 2 * m.hidden_size
-        self.embedding = nn.Embedding(m.vocab_size, m.emb_dim, padding_idx=PAD_ID)
+        self.emb = nn.Embedding(m.vocab_size, m.emb_dim, padding_idx=PAD_ID)
         self.dropout = nn.Dropout(m.dropout)
         self.rnn = nn.LSTM(
             m.emb_dim + enc_dim,           # input feeding: [emb ; prev context]
@@ -132,7 +132,7 @@ class Decoder(nn.Module):
         enc_keys: torch.Tensor,                       # [B, S, H]
         pad_mask: torch.Tensor,                       # [B, S]
     ) -> tuple[torch.Tensor, tuple, torch.Tensor, torch.Tensor]:
-        emb = self.dropout(self.embedding(input_id))              # [B, E]
+        emb = self.dropout(self.emb(input_id))              # [B, E]
         rnn_in = torch.cat([emb, prev_context], dim=-1).unsqueeze(1)  # [B,1,E+2H]
         rnn_out, state = self.rnn(rnn_in, state)
         dec_state = rnn_out.squeeze(1)                            # [B, H]
@@ -154,7 +154,7 @@ class Seq2Seq(nn.Module):
 
     def encode(self, src, src_lengths):
         enc_outputs, state = self.encoder(src, src_lengths)
-        enc_keys = self.decoder.attn.project_keys(enc_outputs)
+        enc_keys = self.decoder.attn.keys(enc_outputs)
         return enc_outputs, enc_keys, state
 
     def forward(

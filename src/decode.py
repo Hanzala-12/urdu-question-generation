@@ -106,26 +106,27 @@ def beam_search(
             [attn_hist[beam_idx], attn[beam_idx].unsqueeze(1)], dim=1
         )
 
-        keep = torch.ones(k, dtype=torch.bool, device=device)
         for b in range(k):
             if int(token_idx[b]) == EOS_ID:
                 seq = seqs[b, 1:-1].tolist()
-                lp = ((len(seq) + 1) ** length_penalty)
+                lp = (len(seq) + 1) ** length_penalty
                 finished.append((scores[b].item() / lp, seq, attn_hist[b, :-1]))
-                keep[b] = False
-                scores[b] = float("-inf")
+                scores[b] = float("-inf")          # do not extend a finished beam
         if len(finished) >= k:
             break
 
-    if not finished:
-        # Nothing hit EOS - take the best running hypothesis.
-        b = int(scores.argmax())
-        seq = seqs[b, 1:].tolist()
-        finished.append((scores[b].item(), seq, attn_hist[b]))
+    # Also consider the beams still running - otherwise a single short beam
+    # that hit EOS early wins over better, longer, unfinished hypotheses.
+    for b in range(k):
+        if scores[b].item() != float("-inf"):
+            seq = seqs[b, 1:].tolist()
+            lp = (len(seq) + 1) ** length_penalty
+            finished.append((scores[b].item() / lp, seq, attn_hist[b]))
 
     finished.sort(key=lambda x: x[0], reverse=True)
     _, best_seq, best_attn = finished[0]
-    return best_seq, best_attn
+    best_seq = _trim_eos(best_seq)
+    return best_seq, best_attn[: len(best_seq)]
 
 
 def _trim_eos(ids: list[int]) -> list[int]:
