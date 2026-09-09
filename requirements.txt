@@ -11,3 +11,4 @@ pandas>=2.0
 numpy>=1.24
 arabic-reshaper>=3.0     # render Urdu in the attention heat-map
 python-bidi>=0.4
+ipython>=8.0             # inline tables/figures if running the notebook locally (Kaggle has it)

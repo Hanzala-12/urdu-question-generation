@@ -203,13 +203,19 @@ def _urdu_font():
     except Exception:
         return None, (lambda s: s)
 
+    # Prefer a proper Naskh/Sans text face; Kufi is decorative and drops glyphs.
     patterns = [
         r"C:\Windows\Fonts\tahoma.ttf", r"C:\Windows\Fonts\arial.ttf",
-        "/usr/share/fonts/**/*Noto*Arabic*.ttf", "/usr/share/fonts/**/*Amiri*.ttf",
+        "/usr/share/fonts/**/NotoNaskhArabic-Regular.ttf",
+        "/usr/share/fonts/**/NotoSansArabic-Regular.ttf",
+        "/usr/share/fonts/**/*NotoNaskhArabic*.ttf",
+        "/usr/share/fonts/**/*NotoSansArabic*.ttf",
+        "/usr/share/fonts/**/*Amiri*.ttf",
+        "/usr/share/fonts/**/*[Nn]askh*.ttf",
         "/System/Library/Fonts/**/*Arab*.ttf",
     ]
     for pat in patterns:
-        hits = glob.glob(pat, recursive=True)
+        hits = sorted(glob.glob(pat, recursive=True))
         if hits:
             return fm.FontProperties(fname=hits[0]), reshape
     return None, reshape
