@@ -184,6 +184,37 @@ def _write_human_eval(out_valid: dict, path: Path, n: int, seed: int) -> None:
     print(f"wrote {path}  ({len(idx)} rows) - fill m1_/m2_ columns with 1/0")
 
 
+def _urdu_font():
+    """An Arabic-script FontProperties (+ a reshaper), or (None, identity).
+
+    Matplotlib's default font has no Urdu glyphs, so labels render as boxes
+    unless we point it at a font that covers the Arabic block and reshape
+    the text for right-to-left display.
+    """
+    import glob
+
+    import matplotlib.font_manager as fm
+
+    try:
+        import arabic_reshaper
+        from bidi.algorithm import get_display
+
+        reshape = lambda s: get_display(arabic_reshaper.reshape(s))
+    except Exception:
+        return None, (lambda s: s)
+
+    patterns = [
+        r"C:\Windows\Fonts\tahoma.ttf", r"C:\Windows\Fonts\arial.ttf",
+        "/usr/share/fonts/**/*Noto*Arabic*.ttf", "/usr/share/fonts/**/*Amiri*.ttf",
+        "/System/Library/Fonts/**/*Arab*.ttf",
+    ]
+    for pat in patterns:
+        hits = glob.glob(pat, recursive=True)
+        if hits:
+            return fm.FontProperties(fname=hits[0]), reshape
+    return None, reshape
+
+
 def _attention_figure(model, sp, source_text: str, path: Path) -> None:
     import matplotlib
 
@@ -194,21 +225,31 @@ def _attention_figure(model, sp, source_text: str, path: Path) -> None:
 
     question, attn, src_pieces = generate(model, sp, source_text, mode="greedy")
     gen_pieces = [sp.id_to_piece(i) for i in sp.encode(question, out_type=int)]
+    src_pieces = [p.replace("\u2581", "") or " " for p in src_pieces]
+    gen_pieces = [p.replace("\u2581", "") or " " for p in gen_pieces]
     attn = attn[: len(gen_pieces), : len(src_pieces)]
 
-    fig, ax = plt.subplots(figsize=(max(6, len(src_pieces) * 0.5),
-                                    max(3, len(gen_pieces) * 0.5)))
-    ax.imshow(attn.numpy(), aspect="auto", cmap="viridis")
+    font, reshape = _urdu_font()
+    fig, ax = plt.subplots(figsize=(max(7, len(src_pieces) * 0.45),
+                                    max(3.5, len(gen_pieces) * 0.5)))
+    im = ax.imshow(attn.numpy(), aspect="auto", cmap="viridis")
     ax.set_xticks(range(len(src_pieces)))
-    ax.set_xticklabels(src_pieces, rotation=90, fontsize=8)
     ax.set_yticks(range(len(gen_pieces)))
-    ax.set_yticklabels(gen_pieces, fontsize=8)
+    if font is not None:
+        ax.set_xticklabels([reshape(p) for p in src_pieces], rotation=90,
+                           fontsize=9, fontproperties=font)
+        ax.set_yticklabels([reshape(p) for p in gen_pieces], fontsize=9,
+                           fontproperties=font)
+    else:  # no Arabic font: index the axes, print the legend
+        print("source pieces   :", " ".join(f"{i}:{p}" for i, p in enumerate(src_pieces)))
+        print("generated pieces:", " ".join(f"{i}:{p}" for i, p in enumerate(gen_pieces)))
     ax.set_xlabel("source pieces")
     ax.set_ylabel("generated pieces")
-    ax.set_title("Decoder attention")
+    ax.set_title("Decoder attention (Bahdanau)")
+    fig.colorbar(im, ax=ax, fraction=0.025)
     fig.tight_layout()
     path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(path, dpi=130)
+    fig.savefig(path, dpi=140)
     plt.close(fig)
     print(f"wrote {path}   (source: {source_text[:60]}...)")
 
@@ -311,8 +352,14 @@ def main() -> None:
         _write_samples(out_valid, RESULTS_DIR / "samples.tsv", CFG.decode.n_eval_samples)
         _write_human_eval(out_valid, RESULTS_DIR / "human_eval.csv",
                           CFG.decode.human_eval_n, CFG.decode.human_eval_seed)
-        # A readable example for the attention heat-map.
-        _attention_figure(model, sp, out_valid["src"][0], FIGURES_DIR / "attention.png")
+        # A readable example for the attention heat-map: a short source whose
+        # greedy question is short and ends in the Urdu question mark.
+        pick = next(
+            (s for s, g in zip(out_valid["src"], out_valid["greedy"])
+             if len(s.split()) <= 16 and 3 <= len(g.split()) <= 9 and g.strip().endswith("؟")),
+            out_valid["src"][0],
+        )
+        _attention_figure(model, sp, pick, FIGURES_DIR / "attention.png")
     _write_tables(all_metrics, RESULTS_DIR / "tables.md")
 
 
