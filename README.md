@@ -87,11 +87,18 @@ Trained 15 epochs on a Tesla T4 (~84 min); best checkpoint at epoch 10
 
 Greedy sits just below the manual's expected 6–13 band — reasonable for a
 35 M-parameter model trained from scratch, and well clear of "≈0 = bug" /
-"&gt;30 = leakage". **Beam search hurts here:** it collapses to a handful of
-fluent but generic questions and recycles them, so n-gram overlap with the
-varied references drops. This is the documented beam-degradation effect on
-weak models (Koehn & Knowles, 2017) — greedy stays anchored to the source
-via attention. See the blog's discussion section.
+"&gt;30 = leakage".
+
+**Beam search hurts here, and that is expected.** Beam approximately maximises
+the total sequence probability `P(question | source)`. An under-trained model
+puts high probability on a few fluent, generic question templates that score
+well almost regardless of the source, so wide-beam search finds and recycles
+them; greedy avoids this because it commits token-by-token following the
+attention distribution. This *beam-search degradation* on weak models is well
+documented — larger beams lowering BLEU (Koehn & Knowles 2017, §3.3), the exact
+search optimum being degenerate (Stahlberg & Byrne 2019), the effect growing
+with beam width (Cohen & Beck 2019). It is why production NMT uses small beams
+with length normalisation. Discussed further in the blog (§4.7).
 
 ![Front end](results/figures/frontend.png)
 
@@ -106,6 +113,18 @@ via attention. See the blog's discussion section.
 (Arif, Farid, Athar & Raza, LREC-COLING 2024) and
 [Wiki-UQA](https://huggingface.co/datasets/uqa/Wiki-UQA) as an out-of-domain test.
 Licensed CC-BY-4.0.
+
+## References
+
+- Arif, Farid, Athar & Raza (2024). *UQA: A Corpus for Urdu Question Answering.* LREC-COLING.
+- Du, Shao & Cardie (2017). *Learning to Ask: Neural Question Generation for Reading Comprehension.* ACL. — sentence-level QG setting.
+- Bahdanau, Cho & Bengio (2015). *Neural Machine Translation by Jointly Learning to Align and Translate.* ICLR. — additive attention.
+- Luong, Pham & Manning (2015). *Effective Approaches to Attention-based NMT.* EMNLP. — input feeding.
+- Sennrich, Haddow & Birch (2016). *Neural Machine Translation of Rare Words with Subword Units.* ACL. — subword vocabularies.
+- Koehn & Knowles (2017). *Six Challenges for Neural Machine Translation.* WNMT.
+- Stahlberg & Byrne (2019). *On NMT Search Errors and Model Errors: Cat Got Your Tongue?* EMNLP.
+- Cohen & Beck (2019). *Empirical Analysis of Beam Search Performance Degradation in Neural Sequence Models.* ICML.
+- Meister, Cotterell & Vieira (2020). *If Beam Search is the Answer, What Was the Question?* EMNLP.
 
 ## Author
 

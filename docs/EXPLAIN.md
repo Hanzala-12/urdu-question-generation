@@ -179,17 +179,29 @@ attention matrix for the chosen hypothesis. `generate` wraps raw text →
 `(question, attn, source_pieces)` for the front end.
 
 **Why:**
-- *Greedy for bulk metrics* — fast; *beam for quality* — explores a few
-  paths and usually improves BLEU a little, at the cost of speed.
-- *Length penalty* `score / (len^α)` — without it beam search prefers very
-  short questions.
+- *Greedy* commits to the argmax each step, following the attention
+  distribution — it stays anchored to the source. *Beam* keeps `k`
+  hypotheses and approximately maximises the **whole-sequence** log-prob.
+- *Length penalty* `score / (len^α)`, α = 0.6 — beam compares sequences of
+  different lengths; without normalisation it prefers very short ones.
+- We also rank the still-running beams at the end, so a beam that hit `</s>`
+  early cannot beat a better, longer, unfinished one.
 
 **Be ready for:**
 - *Beam mechanics:* at each step score every (beam × vocab) extension,
   take the global top-k, remember which beam each came from, carry that
   beam's LSTM state/context forward.
-- *Where can beam hurt?* It can over-favour generic short questions
-  ("یہ کیا ہے؟") — call that out in the discussion with an example.
+- *Our result: beam BLEU < greedy BLEU.* This is **beam-search
+  degradation** on a weak model. Beam maximises `P(q | source)`; an
+  under-trained model puts high probability on a few generic question
+  templates that are fluent almost regardless of the source, so beam finds
+  and recycles them (you can see identical beam outputs for different
+  sources in `results/samples.tsv`). Greedy avoids it by staying local.
+  Documented in Koehn & Knowles (2017, §3.3), Stahlberg & Byrne (2019),
+  Cohen & Beck (2019). This is the answer to the manual's §4.7 question
+  "where does beam search hurt?".
+- *Sanity check:* `beam_search(..., k=1)` returns exactly the greedy output —
+  proof the beam machinery itself is correct.
 
 ---
 
