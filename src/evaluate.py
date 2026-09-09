@@ -134,22 +134,28 @@ def evaluate_split(model, sp, tsv_path: Path, device, beam_max: int,
     ppl = float(torch.exp(torch.tensor(min(ce, 20.0))))
 
     g, b, refs = out["greedy"], out["beam"], out["refs"]
+    m = out["n_beam"]                      # greedy and beam scored on the SAME m examples
     metrics = {
         "n_pairs": len(pairs),
-        "n_greedy_scored": len(refs),
+        "n_scored": m,
         "perplexity": round(ppl, 3),
         "unk_pct": round(100 * out["unk_rate"], 3),
         "greedy": {
-            "bleu4": round(_bleu(g, refs), 2),
-            "rougeL": round(_rouge_l(g, refs), 4),
+            "bleu4": round(_bleu(g[:m], refs[:m]), 2),
+            "rougeL": round(_rouge_l(g[:m], refs[:m]), 4),
         },
         "beam": {
             "k": CFG.decode.beam_size,
-            "n_scored": out["n_beam"],
-            "bleu4": round(_bleu(b, refs[: out["n_beam"]]), 2),
-            "rougeL": round(_rouge_l(b, refs[: out["n_beam"]]), 4),
+            "bleu4": round(_bleu(b, refs[:m]), 2),
+            "rougeL": round(_rouge_l(b, refs[:m]), 4),
         },
     }
+    if len(refs) > m:                      # FYI: greedy over the whole decoded set
+        metrics["greedy_full"] = {
+            "n_scored": len(refs),
+            "bleu4": round(_bleu(g, refs), 2),
+            "rougeL": round(_rouge_l(g, refs), 4),
+        }
     return metrics, out
 
 
@@ -303,6 +309,10 @@ def _write_tables(all_metrics: dict, path: Path) -> None:
         md = all_metrics[split]
         lines.append(f"| {split} | greedy | {md['greedy']['bleu4']} | {md['greedy']['rougeL']} | {md['perplexity']} | {md['unk_pct']} |")
         lines.append(f"| {split} | beam (k={md['beam']['k']}) | {md['beam']['bleu4']} | {md['beam']['rougeL']} | {md['perplexity']} | {md['unk_pct']} |")
+    nsc = all_metrics.get("valid", {}).get("n_scored")
+    if nsc:
+        lines.append(f"\n_Greedy and beam scored on the same {nsc} validation examples; "
+                     f"perplexity on the full split._")
     lines.append("")
     lines.append("## Table 4 - Human evaluation (50 samples)\n")
     lines.append("| | Fluency | Relevance | Answerability |")
