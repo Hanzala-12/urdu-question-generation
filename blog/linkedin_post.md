@@ -24,9 +24,11 @@ greedy stays anchored to the answer via attention. This "beam-search
 degradation" is documented (Koehn & Knowles 2017) — a nice reminder that more
 search ≠ better output.
 
-• The model reliably gets the **question word** right (when / how many) and fails
-on **content** — hallucinating names, repeating phrases, copying fragmented
-tokens.
+• The model reliably gets the **question word** right and fails on **content** —
+hallucinating names, repeating phrases, copying fragmented tokens. On fresh
+sentences through the front end:
+   – *"… جو <ans> نیپال </ans> میں واقع ہے۔"* → *"ماؤنٹ ایورسٹ کہاں واقع ہے؟"* ("Where is Everest located?") ✔
+   – *"… <ans> قائد اعظم محمد علی جناح </ans> 1876 میں …"* → the long name fragments into gibberish
 
 • Attention heat-maps show it genuinely learned to look at the answer span while
 generating.

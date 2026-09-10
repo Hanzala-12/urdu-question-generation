@@ -1,14 +1,11 @@
-"""Task 5 - front end.
+"""Task 5 - front end (Streamlit).
 
-A small Gradio UI: paste an Urdu sentence, type the answer span, and see the
-question the model generates with greedy and beam decoding, plus the
-decoder's attention over the source.
+    streamlit run app/app.py
 
-    python app/app.py            # then open the printed local URL
-
-The model + tokenizer are loaded once at startup from ``artifacts/``.
-If ``artifacts/best.pt`` is missing, see the README for how to fetch it
-from the training run.
+Paste an Urdu sentence, mark the answer span, and read the question the model
+generates with greedy and beam decoding, alongside the decoder's attention
+over the source. The model + tokenizer load once from ``artifacts/`` (see the
+README for how to fetch ``best.pt`` from the release).
 """
 
 from __future__ import annotations
@@ -16,131 +13,121 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-# Allow "python app/app.py" without installing the package.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-import gradio as gr  # noqa: E402
-import matplotlib  # noqa: E402
+import matplotlib
 
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt  # noqa: E402
+import matplotlib.pyplot as plt
+import streamlit as st
 
-from src.config import ANS_CLOSE, ANS_OPEN, BEST_CKPT, CFG, SPM_MODEL  # noqa: E402
-from src.decode import generate  # noqa: E402
-from src.utils import (  # noqa: E402
+from src.config import ANS_CLOSE, ANS_OPEN, BEST_CKPT, CFG, SPM_MODEL
+from src.decode import generate
+from src.evaluate import _urdu_font
+from src.utils import (
     build_model_from_checkpoint,
     load_checkpoint,
     load_sp,
     pick_device,
 )
 
+st.set_page_config(page_title="Urdu Question Generation", page_icon="؟", layout="centered")
+
 DEVICE = pick_device()
-_MODEL = None
-_SP = None
-
-
-def _load():
-    global _MODEL, _SP
-    if _MODEL is not None:
-        return
-    if not Path(SPM_MODEL).exists() or not Path(BEST_CKPT).exists():
-        raise FileNotFoundError(
-            f"Missing {SPM_MODEL} or {BEST_CKPT}. Run training (see README) "
-            "or download the released checkpoint into artifacts/."
-        )
-    _SP = load_sp()
-    ckpt = load_checkpoint(BEST_CKPT, map_location=DEVICE)
-    model, _ = build_model_from_checkpoint(ckpt)
-    _MODEL = model.to(DEVICE).eval()
-
-
-def _mark_answer(sentence: str, answer: str) -> tuple[str, str | None]:
-    """Wrap the first occurrence of ``answer`` in the sentence with <ans> tags."""
-    sentence = " ".join(sentence.split())
-    answer = " ".join(answer.split())
-    if not answer:
-        return sentence, "No answer span given - running on the raw sentence."
-    idx = sentence.find(answer)
-    if idx == -1:
-        return sentence, f"'{answer}' not found in the sentence - running on raw text."
-    marked = (
-        sentence[:idx]
-        + f" {ANS_OPEN} {answer} {ANS_CLOSE} "
-        + sentence[idx + len(answer):]
-    )
-    return " ".join(marked.split()), None
-
-
-from src.evaluate import _urdu_font  # noqa: E402
-
 _FONT, _RESHAPE = _urdu_font()
 _TAG = {ANS_OPEN: "«", ANS_CLOSE: "»"}
 
+EXAMPLES = [
+    ("دریائے سندھ تقریباً 3180 کلومیٹر طویل ہے۔", "3180 کلومیٹر"),
+    ("قائد اعظم محمد علی جناح 1876 میں کراچی میں پیدا ہوئے۔", "کراچی"),
+    ("ماؤنٹ ایورسٹ دنیا کی سب سے بلند پہاڑی ہے، جو نیپال میں واقع ہے۔", "نیپال"),
+]
 
-def _labels(pieces):
-    out = [_TAG.get(p.replace("▁", ""), p.replace("▁", "")) or " " for p in pieces]
-    return [_RESHAPE(p) for p in out]
+
+@st.cache_resource(show_spinner="Loading model …")
+def _load():
+    if not Path(SPM_MODEL).exists() or not Path(BEST_CKPT).exists():
+        st.error(
+            f"Missing {SPM_MODEL} or {BEST_CKPT}. Download `best.pt` from the "
+            "v1.0 release into `artifacts/` (see README)."
+        )
+        st.stop()
+    sp = load_sp()
+    ckpt = load_checkpoint(BEST_CKPT, map_location=DEVICE)
+    model, _ = build_model_from_checkpoint(ckpt)
+    return sp, model.to(DEVICE).eval(), ckpt.get("extra", {})
 
 
-def _heatmap(attn, src_pieces, gen_pieces):
-    attn = attn[: len(gen_pieces), : len(src_pieces)]
-    fig, ax = plt.subplots(
-        figsize=(max(5, len(src_pieces) * 0.45), max(2.5, len(gen_pieces) * 0.45))
-    )
-    ax.imshow(attn.numpy(), aspect="auto", cmap="viridis")
+def _mark(sentence: str, answer: str) -> tuple[str, str | None]:
+    sentence, answer = " ".join(sentence.split()), " ".join(answer.split())
+    if not answer:
+        return sentence, "No answer span given — running on the raw sentence."
+    i = sentence.find(answer)
+    if i == -1:
+        return sentence, f"'{answer}' not found in the sentence — running on raw text."
+    marked = sentence[:i] + f" {ANS_OPEN} {answer} {ANS_CLOSE} " + sentence[i + len(answer):]
+    return " ".join(marked.split()), None
+
+
+def _heatmap(attn, src_ids, gen_text, sp):
+    src_pieces = [_TAG.get(sp.id_to_piece(i), sp.id_to_piece(i).replace("▁", "")) or " " for i in src_ids]
+    gen_pieces = [sp.id_to_piece(i).replace("▁", "") or " " for i in sp.encode(gen_text, out_type=int)]
+    a = attn[: len(gen_pieces), : len(src_pieces)]
+    fig, ax = plt.subplots(figsize=(max(6, len(src_pieces) * 0.42), max(3, len(gen_pieces) * 0.42)))
+    im = ax.imshow(a.numpy(), aspect="auto", cmap="viridis")
     kw = {"fontproperties": _FONT} if _FONT is not None else {}
-    ax.set_xticks(range(len(src_pieces)))
-    ax.set_xticklabels(_labels(src_pieces), rotation=90, fontsize=8, **kw)
-    ax.set_yticks(range(len(gen_pieces)))
-    ax.set_yticklabels(_labels(gen_pieces), fontsize=8, **kw)
-    ax.set_xlabel("source  (« » = <ans> tags)")
-    ax.set_ylabel("generated")
+    ax.set_xticks(range(len(src_pieces))); ax.set_xticklabels([_RESHAPE(p) for p in src_pieces], rotation=90, fontsize=8, **kw)
+    ax.set_yticks(range(len(gen_pieces))); ax.set_yticklabels([_RESHAPE(p) for p in gen_pieces], fontsize=8, **kw)
+    ax.set_xlabel("source  (« » = <ans> tags)"); ax.set_ylabel("generated")
+    fig.colorbar(im, ax=ax, fraction=0.03)
     fig.tight_layout()
     return fig
 
 
-def run(sentence: str, answer: str, mode: str, beam_size: int):
-    _load()
-    source, note = _mark_answer(sentence, answer)
-    question, attn, src_pieces = generate(
-        _MODEL, _SP, source, mode="beam" if mode.startswith("beam") else "greedy",
-        beam_size=int(beam_size), device=DEVICE,
-    )
-    gen_pieces = [_SP.id_to_piece(i) for i in _SP.encode(question, out_type=int)]
-    fig = _heatmap(attn, src_pieces, gen_pieces)
-    status = note or "ok"
-    return source, question, fig, status
+sp, model, meta = _load()
 
+st.title("Urdu Question Generation")
+st.caption(
+    "From-scratch 2-layer BiLSTM encoder – decoder with Bahdanau attention "
+    f"({meta.get('n_params', 35_505_472):,} parameters). Mark the answer in an "
+    "Urdu sentence; the model writes the question."
+)
 
-with gr.Blocks(title="Urdu Question Generation") as demo:
-    gr.Markdown(
-        "# Urdu Question Generation\n"
-        "From-scratch BiLSTM encoder-decoder with Bahdanau attention. "
-        "Enter a sentence and the answer span; the model writes the question."
-    )
-    with gr.Row():
-        with gr.Column():
-            sent = gr.Textbox(label="Urdu sentence", lines=3,
-                              placeholder="دریائے سندھ تقریباً 3180 کلومیٹر طویل ہے۔")
-            ans = gr.Textbox(label="Answer span (exact substring)",
-                             placeholder="3180 کلومیٹر")
-            mode = gr.Radio(["greedy", f"beam (k={CFG.decode.beam_size})"],
-                            value="greedy", label="Decoding")
-            beam = gr.Slider(2, 8, value=CFG.decode.beam_size, step=1,
-                             label="Beam width (beam mode)")
-            go = gr.Button("Generate question", variant="primary")
-        with gr.Column():
-            marked_out = gr.Textbox(label="Marked source fed to the model")
-            q_out = gr.Textbox(label="Generated question")
-            status_out = gr.Textbox(label="Status")
-    attn_out = gr.Plot(label="Attention (generated x source)")
+with st.sidebar:
+    st.subheader("Decoding")
+    mode = st.radio("Strategy", ["greedy", "beam"], horizontal=True)
+    beam_k = st.slider("Beam width", 2, 8, CFG.decode.beam_size, disabled=(mode == "greedy"))
+    st.divider()
+    st.subheader("Examples")
+    for j, (s, a) in enumerate(EXAMPLES):
+        if st.button(s[:38] + "…", key=f"ex{j}", use_container_width=True):
+            st.session_state.update(sentence=s, answer=a)
 
-    go.click(run, [sent, ans, mode, beam], [marked_out, q_out, attn_out, status_out])
-    gr.Examples(
-        [["دریائے سندھ تقریباً 3180 کلومیٹر طویل ہے۔", "3180 کلومیٹر", "greedy", 5]],
-        [sent, ans, mode, beam],
-    )
+sentence = st.text_area("Urdu sentence", key="sentence", height=110,
+                        value=st.session_state.get("sentence", EXAMPLES[0][0]))
+answer = st.text_input("Answer span (exact substring)", key="answer",
+                       value=st.session_state.get("answer", EXAMPLES[0][1]))
+go = st.button("Generate question", type="primary", use_container_width=True)
 
+if go:
+    source, note = _mark(sentence, answer)
+    if note:
+        st.warning(note)
+    ids = sp.encode(source, out_type=int)[: CFG.train.max_src_len]
+    st.markdown("**Marked source**")
+    st.code(source, language=None)
 
-if __name__ == "__main__":
-    demo.launch()
+    greedy_q, g_attn, _ = generate(model, sp, source, mode="greedy", device=DEVICE)
+    st.markdown("### Generated question")
+    st.markdown(f"**Greedy:**  {greedy_q}")
+    if mode == "beam":
+        beam_q, b_attn, _ = generate(model, sp, source, mode="beam", beam_size=int(beam_k), device=DEVICE)
+        st.markdown(f"**Beam (k={int(beam_k)}):**  {beam_q}")
+        show_q, show_attn = beam_q, b_attn
+    else:
+        show_q, show_attn = greedy_q, g_attn
+
+    st.markdown("### Attention")
+    st.pyplot(_heatmap(show_attn, ids, show_q, sp), use_container_width=False)
+else:
+    st.info("Set a sentence and answer span, then press **Generate question**.")

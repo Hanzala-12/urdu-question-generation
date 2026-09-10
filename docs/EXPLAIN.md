@@ -231,10 +231,11 @@ draft `tables.md`.
 
 ## `app/app.py` — Task 5
 
-**What:** Gradio UI. Enter a sentence + the exact answer substring; the app
-wraps the first match in `<ans>` tags, runs greedy or beam decoding, and
-shows the question plus an attention heat-map (generated × source pieces).
-Model + tokenizer load once at startup from `artifacts/`.
+**What:** Streamlit UI (`streamlit run app/app.py`). Enter a sentence + the
+exact answer substring; the app wraps the first match in `<ans>` tags, runs
+greedy or beam decoding, and shows the question plus an attention heat-map
+(generated × source pieces). Model + tokenizer load once via
+`@st.cache_resource`, from `artifacts/`.
 
 **Be ready for:**
 - *What if the answer string isn't in the sentence?* The app warns and

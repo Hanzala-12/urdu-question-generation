@@ -125,6 +125,22 @@ The pattern: the model reliably gets the **question word** right (especially
 `کب` / `کس سال` for dates and `کتنے` for quantities), and it degrades on
 **content** — hallucinating names, repeating, or copying fragmented tokens.
 
+### Trying it on fresh sentences
+
+We also ran the model through the Streamlit front end on sentences it had never
+seen, one per answer type:
+
+| Answer type | Sentence → marked answer | Model output |
+|---|---|---|
+| Country | *ماؤنٹ ایورسٹ … جو `<ans>` نیپال `</ans>` میں واقع ہے۔* | **beam:** *ماؤنٹ ایورسٹ کہاں واقع ہے؟* — "Where is Everest located?" ✔ exactly right |
+| Date | *پاکستان `<ans>` 14 اگست 1947 `</ans>` کو آزاد ہوا۔* | **greedy:** *پاکستان کا پاکستان کب آزاد ہوا؟* — right question word, one repeated token |
+| Term | *… اکائی کو `<ans>` سی پی یو `</ans>` کہتے ہیں۔* | **greedy:** *کمپیوٹر کی مرکزی مرکزی … کو کیا کہا جاتا ہے؟* — right "what is it called?" frame, "central" repeated |
+| Phrase | *علامہ اقبال نے شاعری میں `<ans>` فارسی اور اردو `</ans>` … استعمال کیں۔* | **beam:** *… میں کون سی زبانیں استعمال کی گئیں؟* — right "which languages", but a hallucinated setting |
+| Person | *… `<ans>` قائد اعظم محمد علی جناح `</ans>` 1876 میں کراچی میں پیدا ہوئے۔* | **greedy:** *دداحصاح کس پیدا ہوا تھا؟* — the long name fragments into gibberish |
+
+Same story as the validation set: the model gets the *frame* of the question
+right and stumbles on rare content, especially long proper nouns.
+
 ### Attention
 
 ![Attention heat-map](../results/figures/attention.png)

@@ -38,7 +38,7 @@ notebooks/
   urdu_qg_standalone.ipynb  — self-contained: data → tokenizer → model → train → eval → tables
   train_urdu_qg.ipynb       — thin wrapper: clones the repo and runs the src/ modules
 src/            data_prep, spm_train, dataset, model, train, decode, evaluate
-app/            app.py               — Gradio front end
+app/            app.py               — Streamlit front end
 results/        metrics.json, samples.tsv, human_eval.csv, tables.md, figures/
 blog/           medium_blog.md, linkedin_post.md
 docs/EXPLAIN.md per-module notes
@@ -61,7 +61,7 @@ pip install -r requirements.txt
 | 3. Debug gate | `python -m src.train --debug` | 10k pairs, 1 epoch — loss must fall |
 | 4. Train (Task 3) | `python -m src.train --epochs 15` | **Kaggle GPU** (~1–2 h) |
 | 5. Evaluate (Task 4) | `python -m src.evaluate --split both` | local or Kaggle |
-| 6. Front end (Task 5) | `python app/app.py` | local |
+| 6. Front end (Task 5) | `streamlit run app/app.py` | local |
 
 On Kaggle, either notebook runs steps 1–5 and zips `artifacts/` + `results/` (+ the
 TSVs) to `/kaggle/working/outputs.zip`. Download it, unpack into the repo root, then
