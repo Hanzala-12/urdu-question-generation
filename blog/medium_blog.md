@@ -26,12 +26,11 @@ The dataset is **UQA**, a translation of SQuAD 2.0 into Urdu that keeps the
 character offset of every answer. It has ~142k context–question–answer rows.
 
 A from-scratch RNN cannot learn to read a 300-token paragraph, so — following
-Du et al. (2017) — we throw the paragraph away and keep only the **sentence that
-contains the answer**. Concretely: split the context on the Urdu full stop
-(`U+06D4`), Urdu question mark (`U+061F`) and `!`; find the sentence covering the
-answer's character offset; wrap the span in `<ans> … </ans>`; use that sentence
-as the source and the `question` field as the target. Drop pairs longer than 60
-(source) / 25 (target) whitespace tokens.
+Du et al. (2017) — we keep only the **sentence that contains the answer**: split
+the context on the Urdu full stop / question mark / `!`, take the sentence
+covering the answer's character offset, wrap the span in `<ans> … </ans>`, and
+pair it with the `question` field. Pairs over 60 (source) / 25 (target)
+whitespace tokens are dropped.
 
 | | Train | Validation | Wiki-UQA (OOD) |
 |---|---|---|---|
@@ -94,22 +93,18 @@ perplexity is on the full split.
 | Wiki-UQA | beam k=5 | 0.32 | 0.076 | 50.8 | 0.0 |
 
 Du et al. (2017) reached BLEU-4 ≈ 12 on English SQuAD with a bigger model and
-more data. Our greedy 5.58 sits just below the 6–13 band you would expect for a
-35M model trained from scratch — clearly not "≈0 = a bug", and nowhere near
-">30 = train/validation leakage". The `<unk>` rate is 0 because
-`character_coverage=1.0` gives every rare glyph its own piece.
+more data. Our greedy 5.58 sits just below the 6–13 band — clearly not
+"≈0 = a bug", nowhere near ">30 = leakage". `<unk>` is 0 because
+`character_coverage=1.0` gives every rare glyph a piece.
 
 ### Three real outputs
 
-1. **Answer `911`.** Reference: *"ڈچی آف نارمنڈی کی بنیاد کب رکھی گئی تھی؟"*
-   Model: *"نورمنڈی ڈچ کب شروع ہوا؟"* — different wording, same question. The
-   question word `کب` ("when") is right for a date.
-2. **Answer `1185`.** Reference: *"نارمنز نے ڈیرراچیم پر کب حملہ کیا؟"*
-   Model: *"کس سال میں بازنطینیوں نے را پر حملہ کیا؟"* — "in which year… attacked",
-   correct question type, keeps the verb "attacked".
-3. **Answer `بوہیمنڈ` (a name).** Reference: *"رابرٹ کا بیٹا کون تھا؟"*
-   Model: *"کون سا کے بیٹے کا کمانڈر کون تھا؟"* — `کون` ("who") and `بیٹے` ("son")
-   are both there, but the sentence is garbled.
+- **Answer `911`.** Ref *"ڈچی آف نارمنڈی کی بنیاد کب رکھی گئی تھی؟"* → model
+  *"نورمنڈی ڈچ کب شروع ہوا؟"* — same question, different words, `کب` right for a date.
+- **Answer `1185`.** Ref *"نارمنز نے ڈیرراچیم پر کب حملہ کیا؟"* → model
+  *"کس سال میں بازنطینیوں نے را پر حملہ کیا؟"* — "in which year… attacked", right type, keeps the verb.
+- **Answer `بوہیمنڈ` (a name).** Ref *"رابرٹ کا بیٹا کون تھا؟"* → model
+  *"کون سا کے بیٹے کا کمانڈر کون تھا؟"* — `کون` and `بیٹے` are there, but garbled.
 
 ### Five failure cases
 
@@ -127,8 +122,7 @@ The pattern: the model reliably gets the **question word** right (especially
 
 ### Trying it on fresh sentences
 
-We also ran the model through the Streamlit front end on sentences it had never
-seen, one per answer type:
+Through the Streamlit front end, on sentences it had never seen — one per answer type:
 
 | Answer type | Sentence → marked answer | Model output |
 |---|---|---|
@@ -170,18 +164,17 @@ models — larger beams lowering BLEU (Koehn & Knowles, 2017), the exact search
 optimum being degenerate (Stahlberg & Byrne, 2019). A `k=1` beam returns exactly
 the greedy output, which confirms the search itself is implemented correctly.
 
-**Why does Wiki-UQA drop?** BLEU falls from 5.58 to 3.57 and perplexity rises
-from 34 to 51. Wiki-UQA is out of domain *and* written by humans, whereas the
-training questions are **translated** from English SQuAD. Translated text has a
-narrower, more regular phrasing distribution; the model fits that distribution
-and is then surprised by natural Urdu question style. It is a concrete reminder
-that a model trained on translated data learns the translation's quirks as much
-as the language.
+**Why does Wiki-UQA drop?** BLEU falls from 5.58 to 3.57, perplexity rises from
+34 to 51. Wiki-UQA is out of domain *and* human-written, whereas the training
+questions are **translated** from English SQuAD. Translated text has a narrower,
+more regular phrasing distribution; the model fits that and is then surprised by
+natural Urdu — a reminder that training on translated data teaches the
+translation's quirks as much as the language.
 
 ## Wrap-up
 
 A 35M-parameter RNN, trained from scratch for 81 minutes, learns the *shape* of
 Urdu question generation — the right question word, attention that lands on the
-answer — but not yet the *content*. The honest bottleneck is model capacity and
-data quality, not the architecture. Code, notebook and trained weights:
+answer — but not the *content*. The bottleneck is model capacity and data
+quality, not the architecture. Code, notebook and trained weights:
 **https://github.com/Hanzala-12/urdu-question-generation**
