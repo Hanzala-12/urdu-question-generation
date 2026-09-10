@@ -103,6 +103,26 @@ with length normalisation. Discussed further in the blog (§4.7).
 
 ![Front end](results/figures/frontend.png)
 
+## Limitations
+
+A 35 M-parameter RNN trained from scratch for 15 epochs has a real quality
+ceiling, and the outputs show it:
+
+- **Repetition** — the decoder has no coverage or repetition penalty, so on a
+  weakly-trained model it loops on frequent tokens (*"… مرکزی مرکزی …"*).
+- **Dropped / copied content** — attention is not sharp enough to reliably pull
+  in every content word; rare tokens are sometimes omitted or copied verbatim.
+- **Hallucinated entities** — unrelated names appear (e.g. *نپولین*, *شوپن*) when
+  the source noun is a fragmented proper name.
+- **Beam search degrades** (see above) rather than improving quality.
+- **Domain shift** — performance roughly halves on human-written Wiki-UQA vs. the
+  translated training data.
+
+The model reliably gets the **question word** and sentence **shape** right; it
+is the **content** that suffers. More epochs overfit (validation loss rises
+after epoch 10); the fixes that would help — a bigger model, more data,
+pretrained embeddings — are outside the assignment's constraints.
+
 ## Write-ups
 
 - Medium blog — draft in [`blog/medium_blog.md`](blog/medium_blog.md); published link: _TBD_
