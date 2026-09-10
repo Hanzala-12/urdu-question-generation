@@ -118,18 +118,23 @@ if go:
     st.code(source, language=None)
 
     greedy_q, g_attn, _ = generate(model, sp, source, mode="greedy", device=DEVICE)
-    st.markdown("### Generated question")
+    beam_q, b_attn, _ = generate(model, sp, source, mode="beam", beam_size=int(beam_k), device=DEVICE)
     if mode == "beam":
-        beam_q, b_attn, _ = generate(model, sp, source, mode="beam", beam_size=int(beam_k), device=DEVICE)
-        st.markdown(f"## {beam_q}")
-        st.caption(f"beam search, k={int(beam_k)}  ·  greedy, for comparison:  *{greedy_q}*")
-        show_q, show_attn = beam_q, b_attn
+        main_q, main_attn, label = beam_q, b_attn, f"beam search, k = {int(beam_k)}"
     else:
-        st.markdown(f"## {greedy_q}")
-        st.caption("greedy decoding")
-        show_q, show_attn = greedy_q, g_attn
+        main_q, main_attn, label = greedy_q, g_attn, "greedy decoding"
+
+    st.markdown("### Generated question")
+    st.markdown(f"## {main_q}")
+    st.caption(label)
 
     st.markdown("### Attention")
-    st.pyplot(_heatmap(show_attn, ids, show_q, sp), use_container_width=False)
+    st.pyplot(_heatmap(main_attn, ids, main_q, sp), use_container_width=False)
+
+    with st.expander("Compare decoding strategies"):
+        st.table({
+            "decoding": ["greedy", f"beam (k={int(beam_k)})"],
+            "generated question": [greedy_q, beam_q],
+        })
 else:
     st.info("Set a sentence and answer span, then press **Generate question**.")
