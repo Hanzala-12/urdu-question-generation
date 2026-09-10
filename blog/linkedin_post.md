@@ -1,6 +1,6 @@
 # LinkedIn post
 
-*(Attach `results/figures/frontend.png` and `results/figures/attention.png` as images. Replace `[BLOG LINK]` with the Medium URL after publishing.)*
+*(Attach 2–3 images: `results/figures/examples/good/e3.png` (a clean output), `results/figures/examples/bad/b4.png` (the attention collapse), and optionally `results/figures/attention.png`. Replace `[BLOG LINK]` with the Medium URL after publishing.)*
 
 ---
 
@@ -26,11 +26,11 @@ greedy stays anchored to the answer via attention. This "beam-search
 degradation" is documented (Koehn & Knowles 2017) — a nice reminder that more
 search ≠ better output.
 
-• The model reliably gets the **question word** right and fails on **content** —
-hallucinating names, repeating phrases, copying fragmented tokens. On fresh
-sentences through the front end:
+• The model reliably gets the **question word** and sentence shape right and
+fails on **content** — repeating, dropping words, mangling long names. Ten front-
+end runs (five good / five bad) are in the repo. Two:
    – *"… جو <ans> نیپال </ans> میں واقع ہے۔"* → *"ماؤنٹ ایورسٹ کہاں واقع ہے؟"* ("Where is Everest located?") ✔
-   – *"… <ans> قائد اعظم محمد علی جناح </ans> 1876 میں …"* → the long name fragments into gibberish
+   – *"نارمن دسویں صدی میں <ans> فرانس </ans> …"* → *"… فرانس فرانس فرانس فرانس فرانس؟"* — attention collapses onto one token
 
 • Attention heat-maps show it genuinely learned to look at the answer span while
 generating.

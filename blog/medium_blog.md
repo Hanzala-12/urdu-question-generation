@@ -97,45 +97,38 @@ more data. Our greedy 5.58 sits just below the 6–13 band — clearly not
 "≈0 = a bug", nowhere near ">30 = leakage". `<unk>` is 0 because
 `character_coverage=1.0` gives every rare glyph a piece.
 
-### Three real outputs
+Ten runs through the Streamlit front end on sentences the model had never seen —
+five good, five bad. (The full 60 validation outputs are in
+`results/samples.tsv`.)
 
-- **Answer `911`.** Ref *"ڈچی آف نارمنڈی کی بنیاد کب رکھی گئی تھی؟"* → model
-  *"نورمنڈی ڈچ کب شروع ہوا؟"* — same question, different words, `کب` right for a date.
-- **Answer `1185`.** Ref *"نارمنز نے ڈیرراچیم پر کب حملہ کیا؟"* → model
-  *"کس سال میں بازنطینیوں نے را پر حملہ کیا؟"* — "in which year… attacked", right type, keeps the verb.
-- **Answer `بوہیمنڈ` (a name).** Ref *"رابرٹ کا بیٹا کون تھا؟"* → model
-  *"کون سا کے بیٹے کا کمانڈر کون تھا؟"* — `کون` and `بیٹے` are there, but garbled.
+### Five good
 
-### Five failure cases
+![Front end — Everest example](../results/figures/examples/good/e3.png)
 
-| # | Model output (abridged) | Failure type |
+| Sentence (answer) | Generated question |
+|---|---|
+| سورج نظام شمسی کا مرکز ہے۔ (**سورج**) | **شمسی نظام کا مرکز کیا ہے؟** — "What is the centre of the solar system?" |
+| مہاتما گاندھی نے عدم تشدد کا فلسفہ پیش کیا۔ (**عدم تشدد**) | **مہاتما گاندھی نے کیا فلسفہ پیش کیا؟** — "What philosophy did Gandhi present?" |
+| ماؤنٹ ایورسٹ … جو نیپال میں واقع ہے۔ (**نیپال**) | **ماؤنٹ ایورسٹ کہاں واقع ہے؟** — "Where is Everest located?" (beam; greedy said "کس واقع ہے؟") |
+| چاند زمین کے گرد چکر لگاتا ہے۔ (**زمین**) | **چاند کس سمت کے ارد گرد گھومتا ہے؟** — fluent, on-topic, slightly off ("direction") |
+| دریائے سندھ تقریباً 3180 کلومیٹر طویل ہے۔ (**3180 کلومیٹر**) | **دریائے سندھ کتنی ہے؟** — right question word, incomplete |
+
+### Five bad — with failure type
+
+![Front end — attention collapse](../results/figures/examples/bad/b4.png)
+
+| Sentence (answer) | Generated question | Failure type |
 |---|---|---|
-| 1 | *"نپولین نے کتنے مردوں کی قیادت کی؟"* (answer was `30,000`) | **hallucinated entity** — "Napoleon" is not in the source |
-| 2 | *"…شوپن نے کب واپس لے لی؟"* (a date question) | **hallucinated entity** — "Chopin" appears from nowhere |
-| 3 | *"…وفاداری کے وفاداری کے وفاداری کے…"* | **repetition** — the decoder loops on a phrase |
-| 4 | *"را  کہاں سے آئے تھے؟"* | **copied fragment** — `را` is half of a fragmented proper noun; also the wrong question word |
-| 5 | *"زیادہ تر زیادہ تر لوگ زیادہ تر لوگ کس قسم کی…"* | **copied phrase + repetition** — "most" is lifted straight from the source and repeated |
+| ٹیلی ویژن کی ایجاد جان لوگی بیئرڈ نے کی۔ (**جان لوگی بیئرڈ**) | ٹیلی ویژن **کی کی** ایجاد **کی ایجاد** نے **ایجاد** کی؟ | **repetition** |
+| قائد اعظم محمد علی جناح 1876 میں کراچی میں پیدا ہوئے۔ (**کراچی**) | **دد علیاح** کس پیدا ہوا تھا؟ | **mangled proper noun** — long name → gibberish |
+| بازنطینی سلطنت گیارہویں صدی میں کمزور ہو گئی۔ (**گیارہویں صدی**) | بازنطینی سلطنت کس صدی میں **ہوئی**؟ | **dropped content word** — "کمزور ہو گئی" → "ہوئی" |
+| نارمن دسویں صدی میں فرانس آئے۔ (**دسویں صدی**) | کس صدی میں **فرانس … فرانس … فرانس … فرانس … فرانس**؟ | **attention collapse** — every token attends to the one "فرانس" column |
+| وہ ڈنمارک، آئس لینڈ اور ناروے کے نارمن حملہ آوروں … (**نارمن حملہ آوروں**) | **آئس لینڈ اور آئس لینڈ اور آئس لینڈ** کے درمیان تعلق رکھتے تھے؟ | **repetition + ignores the marked answer** |
 
-The pattern: the model reliably gets the **question word** right (especially
-`کب` / `کس سال` for dates and `کتنے` for quantities), and it degrades on
-**content** — hallucinating names, repeating, or copying fragmented tokens.
-
-### Trying it on fresh sentences
-
-![Streamlit front end](../results/figures/frontend.png)
-
-Through the Streamlit front end, on sentences it had never seen — one per answer type:
-
-| Answer type | Sentence → marked answer | Model output |
-|---|---|---|
-| Country | *ماؤنٹ ایورسٹ … جو `<ans>` نیپال `</ans>` میں واقع ہے۔* | **beam:** *ماؤنٹ ایورسٹ کہاں واقع ہے؟* — "Where is Everest located?" ✔ exactly right |
-| Date | *پاکستان `<ans>` 14 اگست 1947 `</ans>` کو آزاد ہوا۔* | **greedy:** *پاکستان کا پاکستان کب آزاد ہوا؟* — right question word, one repeated token |
-| Term | *… اکائی کو `<ans>` سی پی یو `</ans>` کہتے ہیں۔* | **greedy:** *کمپیوٹر کی مرکزی مرکزی … کو کیا کہا جاتا ہے؟* — right "what is it called?" frame, "central" repeated |
-| Phrase | *علامہ اقبال نے شاعری میں `<ans>` فارسی اور اردو `</ans>` … استعمال کیں۔* | **beam:** *… میں کون سی زبانیں استعمال کی گئیں؟* — right "which languages", but a hallucinated setting |
-| Person | *… `<ans>` قائد اعظم محمد علی جناح `</ans>` 1876 میں کراچی میں پیدا ہوئے۔* | **greedy:** *دداحصاح کس پیدا ہوا تھا؟* — the long name fragments into gibberish |
-
-Same story as the validation set: the model gets the *frame* of the question
-right and stumbles on rare content, especially long proper nouns.
+The pattern: the model reliably gets the **question word** and sentence **shape**
+right (`کب`/`کس سال` for dates, `کتنے` for quantities, `کہاں` for places), and
+degrades on **content** — repeating, dropping words, mangling long proper nouns,
+or (b4) collapsing all attention onto a single source token.
 
 ### Attention
 

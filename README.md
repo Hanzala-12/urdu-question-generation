@@ -39,7 +39,7 @@ notebooks/
   train_urdu_qg.ipynb       — thin wrapper: clones the repo and runs the src/ modules
 src/            data_prep, spm_train, dataset, model, train, decode, evaluate
 app/            app.py               — Streamlit front end
-results/        metrics.json, samples.tsv, human_eval.csv, tables.md, figures/
+results/        metrics.json, samples.tsv, human_eval.csv, tables.md, figures/ (+ figures/examples/ — 10 front-end runs, 5 good / 5 bad)
 blog/           medium_blog.md, linkedin_post.md
 docs/EXPLAIN.md per-module notes
 ```
@@ -101,7 +101,7 @@ search optimum being degenerate (Stahlberg & Byrne 2019), the effect growing
 with beam width (Cohen & Beck 2019). It is why production NMT uses small beams
 with length normalisation. Discussed further in the blog (§4.7).
 
-![Front end](results/figures/frontend.png)
+![Front end](results/figures/examples/good/e3.png)
 
 ## Limitations
 
