@@ -1,5 +1,5 @@
 {
-  "wall_clock_s": 5070.3,
+  "wall_clock_s": 4837.5,
   "gpu": "Tesla T4",
   "epochs": 15,
   "batch_size": 64,

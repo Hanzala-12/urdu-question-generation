@@ -74,20 +74,21 @@ and place it at `artifacts/best.pt` before running evaluation or the front end.
 
 ## Results
 
-Trained 15 epochs on a Tesla T4 (~84 min); best checkpoint at epoch 10
+Trained 15 epochs on a Tesla T4 (~81 min); best checkpoint at epoch 10
 (validation loss 3.53, perplexity 34). Full detail in
 [`results/tables.md`](results/tables.md) and [`results/metrics.json`](results/metrics.json).
 
 | Split | Decoding | BLEU-4 | ROUGE-L | PPL | `<unk>`% |
 |---|---|---|---|---|---|
-| UQA valid | greedy | 5.15 | 0.256 | 34.2 | 0.0 |
+| UQA valid | greedy | 5.58 | 0.260 | 34.2 | 0.0 |
 | UQA valid | beam k=5 | 1.02 | 0.126 | 34.2 | 0.0 |
 | Wiki-UQA | greedy | 3.57 | 0.227 | 50.8 | 0.0 |
 | Wiki-UQA | beam k=5 | 0.32 | 0.076 | 50.8 | 0.0 |
 
-Greedy sits just below the manual's expected 6–13 band — reasonable for a
-35 M-parameter model trained from scratch, and well clear of "≈0 = bug" /
-"&gt;30 = leakage".
+Greedy and beam are scored on the same 3,000 validation examples; perplexity is
+on the full split. Greedy sits just below the manual's expected 6–13 band —
+reasonable for a 35 M-parameter model trained from scratch, and well clear of
+"≈0 = bug" / "&gt;30 = leakage".
 
 **Beam search hurts here, and that is expected.** Beam approximately maximises
 the total sequence probability `P(question | source)`. An under-trained model

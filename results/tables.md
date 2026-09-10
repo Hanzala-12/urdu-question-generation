@@ -19,16 +19,18 @@
 | Vocabulary size | 8000 |
 | Trainable parameters | 35,505,472 |
 | Optimiser / lr / schedule | Adam / 0.001 / ReduceLROnPlateau (x0.5, patience 1) |
-| Batch / epochs / wall-clock / GPU | 64 / 15 / 84.5 min / Tesla T4 |
+| Batch / epochs / wall-clock / GPU | 64 / 15 / 80.6 min / Tesla T4 |
 
 ## Table 3 — Automatic metrics
 
 | Split | Decoding | BLEU-4 | ROUGE-L | PPL | <unk> % |
 |---|---|---|---|---|---|
-| UQA valid | greedy | 5.15 | 0.2555 | 34.174 | 0.0 |
+| UQA valid | greedy | 5.58 | 0.26 | 34.174 | 0.0 |
 | UQA valid | beam(k=5) | 1.02 | 0.1262 | 34.174 | 0.0 |
 | Wiki-UQA | greedy | 3.57 | 0.2273 | 50.774 | 0.0 |
 | Wiki-UQA | beam(k=5) | 0.32 | 0.0763 | 50.774 | 0.0 |
+
+_Greedy and beam scored on the same 3000 validation examples; perplexity on the full split._
 
 ## Table 4 — Human evaluation (50 samples)
 
