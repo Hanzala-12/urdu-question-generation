@@ -26,3 +26,6 @@ kaggle_outputs/
 Thumbs.db
 .idea/
 .vscode/
+
+# local tooling / editor config — not part of the project
+.claude/
