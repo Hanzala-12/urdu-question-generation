@@ -122,6 +122,8 @@ The pattern: the model reliably gets the **question word** right (especially
 
 ### Trying it on fresh sentences
 
+![Streamlit front end](../results/figures/frontend.png)
+
 Through the Streamlit front end, on sentences it had never seen — one per answer type:
 
 | Answer type | Sentence → marked answer | Model output |

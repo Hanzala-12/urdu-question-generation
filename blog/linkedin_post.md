@@ -1,5 +1,7 @@
 # LinkedIn post
 
+*(Attach `results/figures/frontend.png` and `results/figures/attention.png` as images. Replace `[BLOG LINK]` with the Medium URL after publishing.)*
+
 ---
 
 For our Generative AI course we built a **sequence-to-sequence question generator
