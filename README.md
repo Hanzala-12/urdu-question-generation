@@ -105,8 +105,8 @@ with length normalisation. Discussed further in the blog (§4.7).
 
 ## Write-ups
 
-- Medium blog: _TBD_
-- LinkedIn post: _TBD_
+- Medium blog — draft in [`blog/medium_blog.md`](blog/medium_blog.md); published link: _TBD_
+- LinkedIn post — draft in [`blog/linkedin_post.md`](blog/linkedin_post.md); published link: _TBD_
 
 ## Dataset
 
