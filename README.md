@@ -125,7 +125,7 @@ pretrained embeddings — are outside the assignment's constraints.
 
 ## Write-ups
 
-- Medium blog — draft in [`blog/medium_blog.md`](blog/medium_blog.md); published link: _TBD_
+- Medium blog — [Teaching an RNN to ask questions in Urdu — from scratch](https://medium.com/@yaqoobhanzala/teaching-an-rnn-to-ask-questions-in-urdu-from-scratch-50816d9f50ac) (draft: [`blog/medium_blog.md`](blog/medium_blog.md))
 - LinkedIn post — draft in [`blog/linkedin_post.md`](blog/linkedin_post.md); published link: _TBD_
 
 ## Dataset

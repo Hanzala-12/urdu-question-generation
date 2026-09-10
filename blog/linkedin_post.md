@@ -1,6 +1,6 @@
 # LinkedIn post
 
-*(Attach 2–3 images: `results/figures/examples/good/e3.png` (a clean output), `results/figures/examples/bad/b4.png` (the attention collapse), and optionally `results/figures/attention.png`. Replace `[BLOG LINK]` with the Medium URL after publishing.)*
+*(Attach 2–3 images when posting: `results/figures/examples/good/e3.png` (a clean output), `results/figures/examples/bad/b4.png` (the attention collapse), and optionally `results/figures/attention.png`.)*
 
 ---
 
@@ -35,7 +35,7 @@ end runs (five good / five bad) are in the repo. Two:
 • Attention heat-maps show it genuinely learned to look at the answer span while
 generating.
 
-Full write-up: [BLOG LINK]
+Full write-up: https://medium.com/@yaqoobhanzala/teaching-an-rnn-to-ask-questions-in-urdu-from-scratch-50816d9f50ac
 Code + notebook + trained weights: https://github.com/Hanzala-12/urdu-question-generation
 
 #NLP #DeepLearning #MachineLearning #Urdu #Seq2Seq #GenerativeAI
