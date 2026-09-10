@@ -71,17 +71,29 @@ def _mark_answer(sentence: str, answer: str) -> tuple[str, str | None]:
     return " ".join(marked.split()), None
 
 
+from src.evaluate import _urdu_font  # noqa: E402
+
+_FONT, _RESHAPE = _urdu_font()
+_TAG = {ANS_OPEN: "«", ANS_CLOSE: "»"}
+
+
+def _labels(pieces):
+    out = [_TAG.get(p.replace("▁", ""), p.replace("▁", "")) or " " for p in pieces]
+    return [_RESHAPE(p) for p in out]
+
+
 def _heatmap(attn, src_pieces, gen_pieces):
     attn = attn[: len(gen_pieces), : len(src_pieces)]
     fig, ax = plt.subplots(
         figsize=(max(5, len(src_pieces) * 0.45), max(2.5, len(gen_pieces) * 0.45))
     )
     ax.imshow(attn.numpy(), aspect="auto", cmap="viridis")
+    kw = {"fontproperties": _FONT} if _FONT is not None else {}
     ax.set_xticks(range(len(src_pieces)))
-    ax.set_xticklabels(src_pieces, rotation=90, fontsize=8)
+    ax.set_xticklabels(_labels(src_pieces), rotation=90, fontsize=8, **kw)
     ax.set_yticks(range(len(gen_pieces)))
-    ax.set_yticklabels(gen_pieces, fontsize=8)
-    ax.set_xlabel("source")
+    ax.set_yticklabels(_labels(gen_pieces), fontsize=8, **kw)
+    ax.set_xlabel("source  (« » = <ans> tags)")
     ax.set_ylabel("generated")
     fig.tight_layout()
     return fig
