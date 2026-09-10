@@ -119,12 +119,14 @@ if go:
 
     greedy_q, g_attn, _ = generate(model, sp, source, mode="greedy", device=DEVICE)
     st.markdown("### Generated question")
-    st.markdown(f"**Greedy:**  {greedy_q}")
     if mode == "beam":
         beam_q, b_attn, _ = generate(model, sp, source, mode="beam", beam_size=int(beam_k), device=DEVICE)
-        st.markdown(f"**Beam (k={int(beam_k)}):**  {beam_q}")
+        st.markdown(f"## {beam_q}")
+        st.caption(f"beam search, k={int(beam_k)}  ·  greedy, for comparison:  *{greedy_q}*")
         show_q, show_attn = beam_q, b_attn
     else:
+        st.markdown(f"## {greedy_q}")
+        st.caption("greedy decoding")
         show_q, show_attn = greedy_q, g_attn
 
     st.markdown("### Attention")
