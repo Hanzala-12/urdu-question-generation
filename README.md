@@ -25,7 +25,7 @@ seq2seq. Own SentencePiece subword vocabulary (8k).
 
 | You want… | Look at |
 |---|---|
-| **One self-contained notebook** — every step inline, run top to bottom on Kaggle | [`notebooks/Project.ipynb`](notebooks/Project01.ipynb) |
+| **One self-contained notebook** — every step inline, run top to bottom on Kaggle | [`notebooks/Urdu_Question:Answer.ipynb`](notebooks/Urdu_Question:Answer.ipynb) |
 | **Modular `.py` code** — the same pipeline as a package, with a thin driver notebook | [`src/`](src/) + [`notebooks/train_urdu_qg.ipynb`](notebooks/train_urdu_qg.ipynb) |
 
 The standalone notebook contains the complete data-preparation, tokenizer, model,
@@ -37,7 +37,7 @@ uses the driver notebook to run it.
 
 ```
 notebooks/
-  Project.ipynb             — self-contained: data → tokenizer → model → train → eval → attention plots
+  Urdu_Question:Answer.ipynb — self-contained: data → tokenizer → model → train → eval → attention plots
   train_urdu_qg.ipynb       — thin wrapper: clones the repo and runs the src/ modules
 src/            data_prep, spm_train, dataset, model, train, decode, evaluate
 app/            app.py               — Streamlit front end
@@ -75,23 +75,24 @@ and place it at `artifacts/best.pt` before running evaluation or the front end.
 
 ## Results
 
-Project trained a 24.87 M-parameter model for 15 epochs on a Tesla T4 (~90.6 min).
-Validation loss reached its best recorded value at epoch 13 (4.2405), with a
-validation perplexity of 71.36. The notebook produced 75,067 training pairs and
-10,018 validation pairs after filtering. These figures come from the saved
-outputs in [`notebooks/Project.ipynb`](notebooks/Project01.ipynb); the modular
+Urdu_Question:Answer trained a 24.87 M-parameter model for 15 epochs on a Tesla
+T4 (~90.6 min). Validation loss reached its best recorded value at epoch 13
+(4.2405). The notebook's final validation perplexity was 75.45. It produced
+75,067 training pairs and 10,018 validation pairs after filtering. These figures
+come from the saved outputs in
+[`notebooks/Urdu_Question:Answer.ipynb`](notebooks/Urdu_Question:Answer.ipynb); the modular
 pipeline results in [`results/`](results/) were produced by a different run.
 
 | Split | Decoding | BLEU-4 | ROUGE-L | PPL | `<unk>`% |
 |---|---|---|---|---|---|
-| UQA valid (200 examples) | greedy | 3.02 | 0.000 | 71.36 | 1.26 |
-| UQA valid (200 examples) | beam k=5 | 2.39 | 0.000 | 71.36 | 0.97 |
-| Wiki-UQA (177 usable examples) | greedy | 1.15 | 0.000 | 71.36 | 2.76 |
-| Wiki-UQA (177 usable examples) | beam k=5 | 2.15 | 0.000 | 71.36 | 1.58 |
+| UQA valid (200 examples) | greedy | 3.02 | 0.199 | 75.45 | 1.26 |
+| UQA valid (200 examples) | beam k=5 | 2.39 | 0.181 | 75.45 | 0.97 |
+| Wiki-UQA (177 usable examples) | greedy | 1.15 | 0.179 | 75.45 | 2.76 |
+| Wiki-UQA (177 usable examples) | beam k=5 | 2.15 | 0.169 | 75.45 | 1.58 |
 
 The notebook scores UQA on the first 200 validation examples and Wiki-UQA on
-177 usable examples. Its ROUGE-L implementation reports 0.000 for every setting,
-so BLEU and the qualitative outputs are more informative here than ROUGE-L.
+177 usable examples. ROUGE-L is computed with whitespace tokenization in this
+version, so the nonzero ROUGE-L values are directly comparable within this run.
 
 **The decoding result is split by domain.** Greedy decoding is better on the
 UQA sample (BLEU-4 3.02 vs. 2.39), while beam search is better on Wiki-UQA
@@ -102,7 +103,8 @@ beam search helps or hurts; the result changes with the evaluation split.
 
 ## Limitations
 
-The Project outputs show a substantial quality gap despite low single-digit
+The Urdu_Question:Answer outputs show a substantial quality gap despite low
+single-digit
 BLEU scores:
 
 - **Content grounding is weak** — generated questions frequently omit the marked
@@ -121,7 +123,8 @@ BLEU scores:
   fluency problems.
 
 The model can sometimes produce the expected interrogative shape, but the
-Project evidence does not support claiming reliable question generation. The
+Urdu_Question:Answer evidence does not support claiming reliable question
+generation. The
 next useful experiments are stronger answer-copying or coverage mechanisms,
 better decoding controls, and evaluation on larger consistently defined samples.
 
