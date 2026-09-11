@@ -154,5 +154,5 @@ Licensed CC-BY-4.0.
 
 ## Author
 
-Muhammad Hanzala ([@Hanzala-12](https://github.com/Hanzala-12))
-Qasim Zubair
+Muhammad Hanzala ([@Hanzala-12](https://github.com/Hanzala-12)), 
+Qasim Zubair ([@Qasim Zubair](https://github.com/qasimzubair)).
