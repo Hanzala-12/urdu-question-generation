@@ -25,17 +25,19 @@ seq2seq. Own SentencePiece subword vocabulary (8k).
 
 | You want… | Look at |
 |---|---|
-| **One self-contained notebook** — every step inline, run top to bottom on Kaggle | [`notebooks/urdu_qg_standalone.ipynb`](notebooks/urdu_qg_standalone.ipynb) |
+| **One self-contained notebook** — every step inline, run top to bottom on Kaggle | [`notebooks/Project.ipynb`](notebooks/Project01.ipynb) |
 | **Modular `.py` code** — the same pipeline as a package, with a thin driver notebook | [`src/`](src/) + [`notebooks/train_urdu_qg.ipynb`](notebooks/train_urdu_qg.ipynb) |
 
-Both produce the same artifacts and identical results — they are the same logic, one
-flattened into a notebook and one split into modules.
+The standalone notebook contains the complete data-preparation, tokenizer, model,
+training, decoding, attention-visualisation, and evaluation workflow inline. The
+modular implementation splits the production pipeline across `src/` modules and
+uses the driver notebook to run it.
 
 ## Repository layout
 
 ```
 notebooks/
-  urdu_qg_standalone.ipynb  — self-contained: data → tokenizer → model → train → eval → tables
+  Project.ipynb             — self-contained: data → tokenizer → model → train → eval → attention plots
   train_urdu_qg.ipynb       — thin wrapper: clones the repo and runs the src/ modules
 src/            data_prep, spm_train, dataset, model, train, decode, evaluate
 app/            app.py               — Streamlit front end
@@ -53,7 +55,6 @@ pip install -r requirements.txt
 ```
 
 ## Pipeline
-
 | Step | Command | Where |
 |---|---|---|
 | 1. Data prep (Task 1) | `python -m src.data_prep` | local or Kaggle (needs internet) |
@@ -74,54 +75,55 @@ and place it at `artifacts/best.pt` before running evaluation or the front end.
 
 ## Results
 
-Trained 15 epochs on a Tesla T4 (~81 min); best checkpoint at epoch 10
-(validation loss 3.53, perplexity 34). Full detail in
-[`results/tables.md`](results/tables.md) and [`results/metrics.json`](results/metrics.json).
+Project trained a 24.87 M-parameter model for 15 epochs on a Tesla T4 (~90.6 min).
+Validation loss reached its best recorded value at epoch 13 (4.2405), with a
+validation perplexity of 71.36. The notebook produced 75,067 training pairs and
+10,018 validation pairs after filtering. These figures come from the saved
+outputs in [`notebooks/Project.ipynb`](notebooks/Project01.ipynb); the modular
+pipeline results in [`results/`](results/) were produced by a different run.
 
 | Split | Decoding | BLEU-4 | ROUGE-L | PPL | `<unk>`% |
 |---|---|---|---|---|---|
-| UQA valid | greedy | 5.58 | 0.260 | 34.2 | 0.0 |
-| UQA valid | beam k=5 | 1.02 | 0.126 | 34.2 | 0.0 |
-| Wiki-UQA | greedy | 3.57 | 0.227 | 50.8 | 0.0 |
-| Wiki-UQA | beam k=5 | 0.32 | 0.076 | 50.8 | 0.0 |
+| UQA valid (200 examples) | greedy | 3.02 | 0.000 | 71.36 | 1.26 |
+| UQA valid (200 examples) | beam k=5 | 2.39 | 0.000 | 71.36 | 0.97 |
+| Wiki-UQA (177 usable examples) | greedy | 1.15 | 0.000 | 71.36 | 2.76 |
+| Wiki-UQA (177 usable examples) | beam k=5 | 2.15 | 0.000 | 71.36 | 1.58 |
 
-Greedy and beam are scored on the same 3,000 validation examples; perplexity is
-on the full split. Greedy sits just below the manual's expected 6–13 band —
-reasonable for a 35 M-parameter model trained from scratch, and well clear of
-"≈0 = bug" / "&gt;30 = leakage".
+The notebook scores UQA on the first 200 validation examples and Wiki-UQA on
+177 usable examples. Its ROUGE-L implementation reports 0.000 for every setting,
+so BLEU and the qualitative outputs are more informative here than ROUGE-L.
 
-**Beam search hurts here, and that is expected.** Beam approximately maximises
-the total sequence probability `P(question | source)`. An under-trained model
-puts high probability on a few fluent, generic question templates that score
-well almost regardless of the source, so wide-beam search finds and recycles
-them; greedy avoids this because it commits token-by-token following the
-attention distribution. This *beam-search degradation* on weak models is well
-documented — larger beams lowering BLEU (Koehn & Knowles 2017, §3.3), the exact
-search optimum being degenerate (Stahlberg & Byrne 2019), the effect growing
-with beam width (Cohen & Beck 2019). It is why production NMT uses small beams
-with length normalisation. Discussed further in the blog (§4.7).
+**The decoding result is split by domain.** Greedy decoding is better on the
+UQA sample (BLEU-4 3.02 vs. 2.39), while beam search is better on Wiki-UQA
+(2.15 vs. 1.15). This run therefore does not support a universal claim that
+beam search helps or hurts; the result changes with the evaluation split.
 
 ![Front end](results/figures/examples/good/e3.png)
 
 ## Limitations
 
-A 35 M-parameter RNN trained from scratch for 15 epochs has a real quality
-ceiling, and the outputs show it:
+The Project outputs show a substantial quality gap despite low single-digit
+BLEU scores:
 
-- **Repetition** — the decoder has no coverage or repetition penalty, so on a
-  weakly-trained model it loops on frequent tokens (*"… مرکزی مرکزی …"*).
-- **Dropped / copied content** — attention is not sharp enough to reliably pull
-  in every content word; rare tokens are sometimes omitted or copied verbatim.
-- **Hallucinated entities** — unrelated names appear (e.g. *نپولین*, *شوپن*) when
-  the source noun is a fragmented proper name.
-- **Beam search degrades** (see above) rather than improving quality.
-- **Domain shift** — performance roughly halves on human-written Wiki-UQA vs. the
-  translated training data.
+- **Content grounding is weak** — generated questions frequently omit the marked
+  answer, replace source entities, or use unrelated names and facts.
+- **Template repetition is common** — many predictions reuse generic Urdu
+  question patterns and malformed filler phrases.
+- **Answerability is the main failure** — both human raters marked 0% of the
+  sampled greedy and beam questions as answerable.
+- **Human quality is low** — fluency was 0–10% for greedy and 12% for beam;
+  relevance was 4–14% for greedy and 8–20% for beam.
+- **Rater agreement is uneven** — Cohen's κ was 0.000 for greedy fluency,
+  0.408/0.516 for relevance, and 0.621 for beam fluency. Answerability κ is
+  undefined because both raters used one label throughout.
+- **Domain transfer remains difficult** — Wiki-UQA BLEU-4 is lower for greedy
+  decoding than UQA, and its generated questions show the same grounding and
+  fluency problems.
 
-The model reliably gets the **question word** and sentence **shape** right; it
-is the **content** that suffers. More epochs overfit (validation loss rises
-after epoch 10); the fixes that would help — a bigger model, more data,
-pretrained embeddings — are outside the assignment's constraints.
+The model can sometimes produce the expected interrogative shape, but the
+Project evidence does not support claiming reliable question generation. The
+next useful experiments are stronger answer-copying or coverage mechanisms,
+better decoding controls, and evaluation on larger consistently defined samples.
 
 ## Write-ups
 
@@ -150,3 +152,4 @@ Licensed CC-BY-4.0.
 ## Author
 
 Muhammad Hanzala ([@Hanzala-12](https://github.com/Hanzala-12))
+Qasim Zubair
