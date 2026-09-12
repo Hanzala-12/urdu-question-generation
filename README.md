@@ -25,7 +25,7 @@ seq2seq. Own SentencePiece subword vocabulary (8k).
 
 | You want… | Look at |
 |---|---|
-| **One self-contained notebook** — every step inline, run top to bottom on Kaggle | [`notebooks/Urdu_Question:Answer.ipynb`](notebooks/Urdu_Question:Answer.ipynb) |
+| **One self-contained notebook** — every step inline, run top to bottom on Kaggle | [`notebooks/urdu-question-answer.ipynb`](notebooks/urdu-question-answer.ipynb) |
 | **Modular `.py` code** — the same pipeline as a package, with a thin driver notebook | [`src/`](src/) + [`notebooks/train_urdu_qg.ipynb`](notebooks/train_urdu_qg.ipynb) |
 
 The standalone notebook contains the complete data-preparation, tokenizer, model,
@@ -37,7 +37,7 @@ uses the driver notebook to run it.
 
 ```
 notebooks/
-  Urdu_Question:Answer.ipynb — self-contained: data → tokenizer → model → train → eval → attention plots
+  urdu-question-answer.ipynb — self-contained: data → tokenizer → model → train → eval → attention plots
   train_urdu_qg.ipynb       — thin wrapper: clones the repo and runs the src/ modules
 src/            data_prep, spm_train, dataset, model, train, decode, evaluate
 app/            app.py               — Streamlit front end
@@ -75,29 +75,37 @@ and place it at `artifacts/best.pt` before running evaluation or the front end.
 
 ## Results
 
-Urdu_Question:Answer trained a 24.87 M-parameter model for 15 epochs on a Tesla
-T4 (~90.6 min). Validation loss reached its best recorded value at epoch 13
-(4.2405). The notebook's final validation perplexity was 75.45. It produced
-75,067 training pairs and 10,018 validation pairs after filtering. These figures
-come from the saved outputs in
-[`notebooks/Urdu_Question:Answer.ipynb`](notebooks/Urdu_Question:Answer.ipynb); the modular
-pipeline results in [`results/`](results/) were produced by a different run.
+The latest self-contained notebook run trained a 35.112 M-parameter model for
+15 epochs on a Tesla T4 (109.3 min). It used batch size 64, Adam with learning
+rate 0.001, teacher forcing ratio 0.65, gradient clipping at 1.0, and beam
+search with width 5. The filtered data contained 75,067 training pairs and
+10,018 validation pairs. The debug gate also passed: loss fell from 5.1952 to
+3.1241 over five epochs on a 10,000-pair subset.
+
+Validation loss was lowest at epoch 3 (6.1775), after which it increased even
+though training loss continued to fall. The notebook saved the best checkpoint
+at that point, but its later perplexity and decoding cells evaluated the final
+epoch-15 model without reloading that checkpoint. The metrics below therefore
+describe the final in-memory epoch-15 model, not the best checkpoint. The
+modular pipeline results in [`results/`](results/) were produced by a different
+run.
 
 | Split | Decoding | BLEU-4 | ROUGE-L | PPL | `<unk>`% |
 |---|---|---|---|---|---|
-| UQA valid (200 examples) | greedy | 3.02 | 0.199 | 75.45 | 1.26 |
-| UQA valid (200 examples) | beam k=5 | 2.39 | 0.181 | 75.45 | 0.97 |
-| Wiki-UQA (177 usable examples) | greedy | 1.15 | 0.179 | 75.45 | 2.76 |
-| Wiki-UQA (177 usable examples) | beam k=5 | 2.15 | 0.169 | 75.45 | 1.58 |
+| UQA valid (2,000 examples) | greedy | 3.78 | 0.226 | 1231.77 | 0.49 |
+| UQA valid (2,000 examples) | beam k=5 | 4.02 | 0.232 | 1231.77 | 0.52 |
+| Wiki-UQA (177 usable examples) | greedy | 2.52 | 0.186 | 1231.77 | 1.38 |
+| Wiki-UQA (177 usable examples) | beam k=5 | 3.74 | 0.191 | 1231.77 | 1.51 |
 
-The notebook scores UQA on the first 200 validation examples and Wiki-UQA on
-177 usable examples. ROUGE-L is computed with whitespace tokenization in this
-version, so the nonzero ROUGE-L values are directly comparable within this run.
+The notebook scores UQA on the first 2,000 validation examples and Wiki-UQA on
+all 177 usable examples. ROUGE-L is computed with whitespace tokenization in
+this version, so the nonzero ROUGE-L values are directly comparable within this
+run.
 
-**The decoding result is split by domain.** Greedy decoding is better on the
-UQA sample (BLEU-4 3.02 vs. 2.39), while beam search is better on Wiki-UQA
-(2.15 vs. 1.15). This run therefore does not support a universal claim that
-beam search helps or hurts; the result changes with the evaluation split.
+**Beam search is better in this latest run.** Beam search improves BLEU-4 over
+greedy decoding on both UQA (4.02 vs. 3.78) and Wiki-UQA (3.74 vs. 2.52), with
+a smaller ROUGE-L improvement on each split. This comparison should still be
+read alongside the checkpoint caveat above and the human-evaluation results.
 
 ![Front end](results/figures/examples/good/e3.png)
 
