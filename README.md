@@ -86,9 +86,7 @@ Validation loss was lowest at epoch 3 (6.1775), after which it increased even
 though training loss continued to fall. The notebook saved the best checkpoint
 at that point, but its later perplexity and decoding cells evaluated the final
 epoch-15 model without reloading that checkpoint. The metrics below therefore
-describe the final in-memory epoch-15 model, not the best checkpoint. The
-modular pipeline results in [`results/`](results/) were produced by a different
-run.
+describe the final in-memory epoch-15 model, not the best checkpoint.
 
 | Split | Decoding | BLEU-4 | ROUGE-L | PPL | `<unk>`% |
 |---|---|---|---|---|---|
@@ -107,13 +105,10 @@ greedy decoding on both UQA (4.02 vs. 3.78) and Wiki-UQA (3.74 vs. 2.52), with
 a smaller ROUGE-L improvement on each split. This comparison should still be
 read alongside the checkpoint caveat above and the human-evaluation results.
 
-![Front end](results/figures/examples/good/e3.png)
-
 ## Limitations
 
-The Urdu_Question:Answer outputs show a substantial quality gap despite low
-single-digit
-BLEU scores:
+The latest notebook outputs show a substantial quality gap despite low
+single-digit BLEU scores:
 
 - **Content grounding is weak** — generated questions frequently omit the marked
   answer, replace source entities, or use unrelated names and facts.
@@ -126,15 +121,14 @@ BLEU scores:
 - **Rater agreement is uneven** — Cohen's κ was 0.000 for greedy fluency,
   0.408/0.516 for relevance, and 0.621 for beam fluency. Answerability κ is
   undefined because both raters used one label throughout.
-- **Domain transfer remains difficult** — Wiki-UQA BLEU-4 is lower for greedy
-  decoding than UQA, and its generated questions show the same grounding and
+- **Domain transfer remains difficult** — Wiki-UQA scores remain weaker in
+  ROUGE-L than UQA, and its generated questions show the same grounding and
   fluency problems.
 
-The model can sometimes produce the expected interrogative shape, but the
-Urdu_Question:Answer evidence does not support claiming reliable question
-generation. The
-next useful experiments are stronger answer-copying or coverage mechanisms,
-better decoding controls, and evaluation on larger consistently defined samples.
+The model can sometimes produce the expected interrogative shape, but this
+latest run does not support claiming reliable question generation. The next
+useful experiments are stronger answer-copying or coverage mechanisms, better
+decoding controls, and evaluation on larger consistently defined samples.
 
 ## Write-ups
 
