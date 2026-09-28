@@ -90,6 +90,10 @@ on the full split. Greedy sits just below the manual's expected 6–13 band —
 reasonable for a 35 M-parameter model trained from scratch, and well clear of
 "≈0 = bug" / "&gt;30 = leakage".
 
+`<unk>` is 0% throughout because `character_coverage=1.0` gives every character
+a fallback piece, so the tokenizer never needs the placeholder — and a
+confident model (perplexity 34) rarely predicts it even when it's available.
+
 **Beam search hurts here, and that is expected.** Beam approximately maximises
 the total sequence probability `P(question | source)`. An under-trained model
 puts high probability on a few fluent, generic question templates that score
