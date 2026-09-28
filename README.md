@@ -105,7 +105,15 @@ search optimum being degenerate (Stahlberg & Byrne 2019), the effect growing
 with beam width (Cohen & Beck 2019). It is why production NMT uses small beams
 with length normalisation. Discussed further in the blog (§4.7).
 
-![Front end](results/figures/examples/good/e3.png)
+## Front end
+
+`streamlit run app/app.py` — paste an Urdu sentence, mark the answer, and compare
+greedy vs. beam output alongside the attention heat-map:
+
+![Front end running on the Everest example, beam decoding](results/figures/frontend_screenshot.png)
+
+Ten further runs (5 good / 5 bad, with failure types) are in
+[`results/figures/examples/`](results/figures/examples/).
 
 ## Limitations
 
@@ -153,4 +161,5 @@ Licensed CC-BY-4.0.
 
 ## Author
 
-Muhammad Hanzala ([@Hanzala-12](https://github.com/Hanzala-12))
+Muhammad Hanzala ([@Hanzala-12](https://github.com/Hanzala-12)),
+Qasim Zubair ([@qasimzubair](https://github.com/qasimzubair))
